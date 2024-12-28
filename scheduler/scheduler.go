@@ -111,25 +111,6 @@ func (s *Scheduler[G]) processLoop() {
 		},
 	)
 
-	handle := func(recv interface{}) bool {
-		switch event := recv.(type) {
-		case *exitEvent:
-			s.releaseAll()
-			return true
-		case *ReleaseGroupEvent[G]:
-			s.releaseGroup(event.Group)
-		case *ReleaseGroupSliceEvent[G]:
-			s.releaseGroupSlice(event.GroupSlice)
-		case *ScheduleAsyncEvent[G]:
-			s.scheduleAsyncEvent(event)
-		case *ScheduleSequenceEvent[G]:
-			s.scheduleSequenceEvent(event)
-		default:
-			log.Printf("%s: unrecognized recv=%#v", s.options.LogPrefix, recv)
-		}
-		return false
-	}
-
 labelFor:
 	for {
 		if s.options.LogDebug {
@@ -151,7 +132,7 @@ labelFor:
 
 		switch index {
 		case 0: // corresponds to eventch
-			if handle(received.Interface()) {
+			if s.handle(received.Interface()) {
 				break labelFor
 			}
 		default:
@@ -194,6 +175,25 @@ labelFor:
 			}
 		}
 	}
+}
+
+func (s *Scheduler[G]) handle(recv interface{}) bool {
+	switch event := recv.(type) {
+	case *exitEvent:
+		s.releaseAll()
+		return true
+	case *ReleaseGroupEvent[G]:
+		s.releaseGroup(event.Group)
+	case *ReleaseGroupSliceEvent[G]:
+		s.releaseGroupSlice(event.GroupSlice)
+	case *ScheduleAsyncEvent[G]:
+		s.scheduleAsyncEvent(event)
+	case *ScheduleSequenceEvent[G]:
+		s.scheduleSequenceEvent(event)
+	default:
+		log.Printf("%s: unrecognized recv=%#v", s.options.LogPrefix, recv)
+	}
+	return false
 }
 
 func (s *Scheduler[G]) addAsyncVariant(v *AsyncVariant[G]) {
@@ -450,9 +450,13 @@ func (s *Scheduler[G]) scheduleSequenceEvent(event *ScheduleSequenceEvent[G]) {
 	event.Sequence.step()
 }
 
-// only this method is made public, to ensure all events are enqueued,
-// thus scheduler internal state is accessed only on processLoop goroutine
-func (s *Scheduler[G]) Process(event Event) {
+// must be invoked on same goroutine as processLoop
+func (s *Scheduler[G]) ProcessSync(event Event) {
+	s.handle(event)
+}
+
+// can be invoked on any goroutine
+func (s *Scheduler[G]) ProcessAsync(event Event) {
 	select {
 	case s.eventch <- event:
 	default:

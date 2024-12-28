@@ -18,7 +18,7 @@ func test1() {
 	s.RunAsync()
 
 	t1 := time.NewTimer(time.Second * 2)
-	s.Process(
+	s.ProcessAsync(
 		&scheduler.ScheduleAsyncEvent[uint8]{
 			ReleaseGroup: true,
 			AsyncVariant: scheduler.NewAsyncVariant(
@@ -26,11 +26,12 @@ func test1() {
 				t1.C,
 				func(s *scheduler.Scheduler[uint8], v *scheduler.AsyncVariant[uint8], recv interface{}) {
 					log.Printf("t1: selected, selectCount=%d, recv=%+v", v.SelectCount, recv)
-					s.Process(
+					s.ProcessSync(
 						&scheduler.ReleaseGroupEvent[uint8]{
 							Group: 1,
 						},
 					)
+					log.Printf("t1: selected, done")
 				},
 				func(s *scheduler.Scheduler[uint8], v *scheduler.AsyncVariant[uint8]) {
 					log.Printf("t1: released, selectCount=%d", v.SelectCount)
@@ -46,7 +47,7 @@ func test1() {
 	<-time.After(time.Second * 3)
 
 	t2 := time.NewTimer(time.Second * 4)
-	s.Process(
+	s.ProcessAsync(
 		&scheduler.ScheduleAsyncEvent[uint8]{
 			ReleaseGroup: true,
 			AsyncVariant: scheduler.NewAsyncVariant(
@@ -69,7 +70,7 @@ func test1() {
 	<-time.After(time.Second * 3)
 
 	t3 := time.NewTimer(time.Second)
-	s.Process(
+	s.ProcessAsync(
 		&scheduler.ScheduleAsyncEvent[string]{
 			ReleaseGroup: true,
 			AsyncVariant: scheduler.NewAsyncVariant(
@@ -84,7 +85,7 @@ func test1() {
 	<-time.After(time.Millisecond * 500)
 
 	t4 := time.NewTimer(time.Second * 2)
-	s.Process(
+	s.ProcessAsync(
 		&scheduler.ScheduleAsyncEvent[uint8]{
 			ReleaseGroup: true,
 			AsyncVariant: scheduler.NewAsyncVariant(
@@ -105,7 +106,7 @@ func test1() {
 	)
 
 	t5 := time.NewTimer(time.Second * 3)
-	s.Process(
+	s.ProcessAsync(
 		&scheduler.ScheduleAsyncEvent[uint8]{
 			ReleaseGroup: false,
 			AsyncVariant: scheduler.NewAsyncVariant(
@@ -127,7 +128,7 @@ func test1() {
 
 	<-time.After(time.Second * 5)
 
-	s.Process(
+	s.ProcessAsync(
 		&scheduler.ReleaseGroupSliceEvent[uint8]{
 			GroupSlice: []uint8{5},
 		},
@@ -135,7 +136,7 @@ func test1() {
 
 	<-time.After(time.Second * 3)
 
-	s.Process(
+	s.ProcessAsync(
 		&scheduler.ScheduleAsyncEvent[uint8]{
 			ReleaseGroup: false,
 			AsyncVariant: scheduler.TimerAsync(
@@ -151,7 +152,7 @@ func test1() {
 		},
 	)
 
-	s.Process(
+	s.ProcessAsync(
 		&scheduler.ScheduleAsyncEvent[uint8]{
 			ReleaseGroup: false,
 			AsyncVariant: scheduler.TickerAsync(
@@ -182,7 +183,7 @@ func test2() {
 	)
 
 	go func() {
-		s.Process(
+		s.ProcessAsync(
 			&scheduler.ScheduleSequenceEvent[string]{
 				ReleaseGroup: true,
 				Sequence: scheduler.NewSequence(
@@ -218,7 +219,7 @@ func test2() {
 
 		<-time.After(time.Second * 5)
 
-		s.Process(
+		s.ProcessAsync(
 			&scheduler.ScheduleSequenceEvent[string]{
 				ReleaseGroup: true,
 				Sequence: scheduler.NewSequence(
@@ -247,7 +248,7 @@ func test2() {
 
 		<-time.After(time.Second * 2)
 
-		s.Process(
+		s.ProcessAsync(
 			&scheduler.ScheduleSequenceEvent[string]{
 				ReleaseGroup: true,
 				Sequence: scheduler.NewSequence(
@@ -280,7 +281,7 @@ func test2() {
 
 		<-time.After(time.Second)
 
-		s.Process(
+		s.ProcessAsync(
 			&scheduler.ScheduleSequenceEvent[string]{
 				ReleaseGroup: false,
 				Sequence: scheduler.NewSequence(
