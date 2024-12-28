@@ -111,21 +111,21 @@ func (s *Scheduler[G]) processLoop() {
 		},
 	)
 
-	handle := func(event Event) bool {
-		switch e := event.(type) {
+	handle := func(recv interface{}) bool {
+		switch event := recv.(type) {
 		case *exitEvent:
 			s.releaseAll()
 			return true
 		case *ReleaseGroupEvent[G]:
-			s.releaseGroup(e.Group)
+			s.releaseGroup(event.Group)
 		case *ReleaseGroupSliceEvent[G]:
-			s.releaseGroupSlice(e.GroupSlice)
+			s.releaseGroupSlice(event.GroupSlice)
 		case *ScheduleAsyncEvent[G]:
-			s.scheduleAsyncEvent(e)
+			s.scheduleAsyncEvent(event)
 		case *ScheduleSequenceEvent[G]:
-			s.scheduleSequenceEvent(e)
+			s.scheduleSequenceEvent(event)
 		default:
-			log.Printf("%s: unrecognized event=%#v", s.options.LogPrefix, event)
+			log.Printf("%s: unrecognized recv=%#v", s.options.LogPrefix, recv)
 		}
 		return false
 	}
@@ -151,8 +151,7 @@ labelFor:
 
 		switch index {
 		case 0: // corresponds to eventch
-			event, _ := received.Interface().(Event)
-			if handle(event) {
+			if handle(received.Interface()) {
 				break labelFor
 			}
 		default:
