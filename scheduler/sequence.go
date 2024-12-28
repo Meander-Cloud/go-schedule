@@ -141,7 +141,7 @@ func TimerStep[G comparable](d time.Duration) *Step[G] {
 				v := NewAsyncVariant[G](
 					s.GroupSlice,
 					timer.C,
-					func(scheduler *Scheduler[G], v *AsyncVariant[G]) {
+					func(scheduler *Scheduler[G], v *AsyncVariant[G], _ interface{}) {
 						// step has completed
 						s.result(true)
 						scheduler.removeAsyncVariant(v)

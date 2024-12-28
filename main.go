@@ -24,8 +24,8 @@ func test1() {
 			AsyncVariant: scheduler.NewAsyncVariant(
 				[]uint8{1, 2},
 				t1.C,
-				func(s *scheduler.Scheduler[uint8], v *scheduler.AsyncVariant[uint8]) {
-					log.Printf("t1: selected, selectCount=%d", v.SelectCount)
+				func(s *scheduler.Scheduler[uint8], v *scheduler.AsyncVariant[uint8], recv interface{}) {
+					log.Printf("t1: selected, selectCount=%d, recv=%+v", v.SelectCount, recv)
 					s.Process(
 						&scheduler.ReleaseGroupEvent[uint8]{
 							Group: 1,
@@ -52,8 +52,8 @@ func test1() {
 			AsyncVariant: scheduler.NewAsyncVariant(
 				[]uint8{2, 3},
 				t2.C,
-				func(s *scheduler.Scheduler[uint8], v *scheduler.AsyncVariant[uint8]) {
-					log.Printf("t2: selected, selectCount=%d", v.SelectCount)
+				func(s *scheduler.Scheduler[uint8], v *scheduler.AsyncVariant[uint8], recv interface{}) {
+					log.Printf("t2: selected, selectCount=%d, recv=%+v", v.SelectCount, recv)
 				},
 				func(s *scheduler.Scheduler[uint8], v *scheduler.AsyncVariant[uint8]) {
 					log.Printf("t2: released, selectCount=%d", v.SelectCount)
@@ -90,8 +90,8 @@ func test1() {
 			AsyncVariant: scheduler.NewAsyncVariant(
 				[]uint8{3, 4},
 				t4.C,
-				func(s *scheduler.Scheduler[uint8], v *scheduler.AsyncVariant[uint8]) {
-					log.Printf("t4: selected, selectCount=%d", v.SelectCount)
+				func(s *scheduler.Scheduler[uint8], v *scheduler.AsyncVariant[uint8], recv interface{}) {
+					log.Printf("t4: selected, selectCount=%d, recv=%+v", v.SelectCount, recv)
 				},
 				func(s *scheduler.Scheduler[uint8], v *scheduler.AsyncVariant[uint8]) {
 					log.Printf("t4: released, selectCount=%d", v.SelectCount)
@@ -111,8 +111,8 @@ func test1() {
 			AsyncVariant: scheduler.NewAsyncVariant(
 				[]uint8{4, 5},
 				t5.C,
-				func(s *scheduler.Scheduler[uint8], v *scheduler.AsyncVariant[uint8]) {
-					log.Printf("t5: selected, selectCount=%d", v.SelectCount)
+				func(s *scheduler.Scheduler[uint8], v *scheduler.AsyncVariant[uint8], recv interface{}) {
+					log.Printf("t5: selected, selectCount=%d, recv=%+v", v.SelectCount, recv)
 				},
 				func(s *scheduler.Scheduler[uint8], v *scheduler.AsyncVariant[uint8]) {
 					log.Printf("t5: released, selectCount=%d", v.SelectCount)

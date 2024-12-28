@@ -143,7 +143,7 @@ labelFor:
 			)
 		}
 
-		index, value, ok := reflect.Select(s.selectCaseSlice)
+		index, received, ok := reflect.Select(s.selectCaseSlice)
 
 		if s.options.LogDebug {
 			log.Printf("%s: selected index=%d, ok=%t", s.options.LogPrefix, index, ok)
@@ -151,7 +151,7 @@ labelFor:
 
 		switch index {
 		case 0: // corresponds to eventch
-			event, _ := value.Interface().(Event)
+			event, _ := received.Interface().(Event)
 			if handle(event) {
 				break labelFor
 			}
@@ -187,7 +187,7 @@ labelFor:
 								)
 							}
 						}()
-						v.selectFunctor(s, v)
+						v.selectFunctor(s, v, received.Interface())
 					}()
 				}
 			} else {

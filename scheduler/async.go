@@ -22,7 +22,7 @@ type AsyncVariant[G comparable] struct {
 	SelectCount uint32
 
 	// functor to invoke upon select
-	selectFunctor func(*Scheduler[G], *AsyncVariant[G])
+	selectFunctor func(*Scheduler[G], *AsyncVariant[G], interface{})
 
 	// functor to invoke to release associated resources
 	releaseFunctor func(*Scheduler[G], *AsyncVariant[G])
@@ -34,7 +34,7 @@ type AsyncVariant[G comparable] struct {
 func NewAsyncVariant[G comparable](
 	groupSlice []G,
 	ch interface{},
-	selectFunctor func(*Scheduler[G], *AsyncVariant[G]),
+	selectFunctor func(*Scheduler[G], *AsyncVariant[G], interface{}),
 	releaseFunctor func(*Scheduler[G], *AsyncVariant[G]),
 ) *AsyncVariant[G] {
 	return &AsyncVariant[G]{
@@ -61,7 +61,7 @@ func TimerAsync[G comparable](
 	return NewAsyncVariant[G](
 		groupSlice,
 		timer.C,
-		func(s *Scheduler[G], v *AsyncVariant[G]) {
+		func(s *Scheduler[G], v *AsyncVariant[G], _ interface{}) {
 			if selectFunctor != nil {
 				func() {
 					defer func() {
@@ -126,7 +126,7 @@ func TickerAsync[G comparable](
 	return NewAsyncVariant[G](
 		groupSlice,
 		ticker.C,
-		func(s *Scheduler[G], v *AsyncVariant[G]) {
+		func(s *Scheduler[G], v *AsyncVariant[G], _ interface{}) {
 			if selectFunctor != nil {
 				func() {
 					defer func() {
