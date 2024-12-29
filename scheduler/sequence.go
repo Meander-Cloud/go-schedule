@@ -37,7 +37,7 @@ func (s *Sequence[G]) result(stepResult bool) {
 		return
 	}
 
-	var sequenceResult bool
+	sequenceResult := false
 	if stepResult && s.StepIndex+1 >= uint16(len(s.stepSlice)) {
 		sequenceResult = true
 	}
@@ -142,9 +142,14 @@ func TimerStep[G comparable](d time.Duration) *Step[G] {
 					s.GroupSlice,
 					timer.C,
 					func(scheduler *Scheduler[G], v *AsyncVariant[G], _ interface{}) {
+						// first remove triggered timer
+						f := scheduler.removeAsyncVariant(v)
+
 						// step has completed
 						s.result(true)
-						scheduler.removeAsyncVariant(v)
+
+						// invoke release
+						f()
 
 						// advance to next step in sequence
 						s.StepIndex += 1

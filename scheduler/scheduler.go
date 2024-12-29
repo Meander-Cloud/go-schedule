@@ -248,7 +248,7 @@ func (s *Scheduler[G]) addAsyncVariant(v *AsyncVariant[G]) {
 	}
 }
 
-func (s *Scheduler[G]) removeAsyncVariant(v *AsyncVariant[G]) {
+func (s *Scheduler[G]) removeAsyncVariant(v *AsyncVariant[G]) func() {
 	handle := v.asyncHandle
 	index := v.selectIndex
 
@@ -261,11 +261,15 @@ func (s *Scheduler[G]) removeAsyncVariant(v *AsyncVariant[G]) {
 			v.SelectCount,
 			v.GroupSlice,
 		)
-		return
+		return func() {}
 	}
 	v.inRemove = true
 
-	if v.releaseFunctor != nil {
+	f := func() {
+		if v.releaseFunctor == nil {
+			return
+		}
+
 		if s.options.LogDebug {
 			log.Printf(
 				"%s: invoking release handle=%d, index=%d, count=%d, group=%+v",
@@ -323,11 +327,11 @@ func (s *Scheduler[G]) removeAsyncVariant(v *AsyncVariant[G]) {
 		swapVariant, found := s.selectIndexTree.Get(swapIndex)
 		if !found {
 			log.Printf("%s: no async variant found for swapIndex=%d", s.options.LogPrefix, swapIndex)
-			return
+			return f
 		}
 		if swapVariant.selectIndex != swapIndex {
 			log.Printf("%s: swapVariant selectIndex=%d mismatch swapIndex=%d", s.options.LogPrefix, swapVariant.selectIndex, swapIndex)
-			return
+			return f
 		}
 
 		s.selectIndexTree.Remove(swapIndex)
@@ -353,6 +357,8 @@ func (s *Scheduler[G]) removeAsyncVariant(v *AsyncVariant[G]) {
 			v.GroupSlice,
 		)
 	}
+
+	return f
 }
 
 func (s *Scheduler[G]) releaseAsyncVariantByTree(scopedIndexTree *rbt.Tree[uint16, *AsyncVariant[G]]) {
@@ -364,7 +370,7 @@ func (s *Scheduler[G]) releaseAsyncVariantByTree(scopedIndexTree *rbt.Tree[uint1
 	it := scopedIndexTree.Iterator()
 	it.End()
 	for it.Prev() {
-		s.removeAsyncVariant(it.Value())
+		s.removeAsyncVariant(it.Value())()
 	}
 }
 

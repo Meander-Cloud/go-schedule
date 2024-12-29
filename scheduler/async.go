@@ -62,6 +62,9 @@ func TimerAsync[G comparable](
 		groupSlice,
 		timer.C,
 		func(s *Scheduler[G], v *AsyncVariant[G], _ interface{}) {
+			// first remove triggered timer
+			f := s.removeAsyncVariant(v)
+
 			if selectFunctor != nil {
 				func() {
 					defer func() {
@@ -82,7 +85,8 @@ func TimerAsync[G comparable](
 				}()
 			}
 
-			s.removeAsyncVariant(v)
+			// invoke release
+			f()
 		},
 		func(s *Scheduler[G], v *AsyncVariant[G]) {
 			if v.SelectCount == 0 {
