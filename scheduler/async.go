@@ -6,6 +6,12 @@ import (
 )
 
 type AsyncVariant[G comparable] struct {
+	// whether to release groups first before scheduling
+	releaseGroup bool
+
+	// whether this async variant is being removed
+	inRemove bool
+
 	// handle to which this async variant is referred, generated via asyncHandleTree
 	asyncHandle uint16
 
@@ -26,18 +32,19 @@ type AsyncVariant[G comparable] struct {
 
 	// functor to invoke to release associated resources
 	releaseFunctor func(*Scheduler[G], *AsyncVariant[G])
-
-	// whether this async variant is being removed
-	inRemove bool
 }
 
 func NewAsyncVariant[G comparable](
+	releaseGroup bool,
 	groupSlice []G,
 	ch interface{},
 	selectFunctor func(*Scheduler[G], *AsyncVariant[G], interface{}),
 	releaseFunctor func(*Scheduler[G], *AsyncVariant[G]),
 ) *AsyncVariant[G] {
 	return &AsyncVariant[G]{
+		releaseGroup: releaseGroup,
+		inRemove:     false,
+
 		// populated in addAsyncVariant
 		asyncHandle: 0,
 		selectIndex: 0,
@@ -47,11 +54,11 @@ func NewAsyncVariant[G comparable](
 		SelectCount:    0,
 		selectFunctor:  selectFunctor,
 		releaseFunctor: releaseFunctor,
-		inRemove:       false,
 	}
 }
 
 func TimerAsync[G comparable](
+	releaseGroup bool,
 	groupSlice []G,
 	d time.Duration,
 	selectFunctor func(),
@@ -59,6 +66,7 @@ func TimerAsync[G comparable](
 ) *AsyncVariant[G] {
 	timer := time.NewTimer(d)
 	return NewAsyncVariant[G](
+		releaseGroup,
 		groupSlice,
 		timer.C,
 		func(s *Scheduler[G], v *AsyncVariant[G], _ interface{}) {
@@ -121,6 +129,7 @@ func TimerAsync[G comparable](
 }
 
 func TickerAsync[G comparable](
+	releaseGroup bool,
 	groupSlice []G,
 	d time.Duration,
 	selectFunctor func(),
@@ -128,6 +137,7 @@ func TickerAsync[G comparable](
 ) *AsyncVariant[G] {
 	ticker := time.NewTicker(d)
 	return NewAsyncVariant[G](
+		releaseGroup,
 		groupSlice,
 		ticker.C,
 		func(s *Scheduler[G], v *AsyncVariant[G], _ interface{}) {

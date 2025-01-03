@@ -1,45 +1,85 @@
 package scheduler
 
 import (
+	"fmt"
 	"log"
 	"time"
 )
 
 type Step[G comparable] struct {
-	resolve func(*Sequence[G]) (bool, func())
+	// resolve step details for invocation
+	resolve func(*Sequence[G]) (bool, func() error)
 }
 
 type Sequence[G comparable] struct {
-	scheduler     *Scheduler[G]
-	GroupSlice    []G
-	stepSlice     []*Step[G]
-	StepIndex     uint16
+	// associated scheduler processing this sequence
+	scheduler *Scheduler[G]
+
+	// whether to release groups first when entering this sequence
+	releaseGroup bool
+
+	// groups to which this sequence belongs
+	GroupSlice []G
+
+	// steps of which this sequence is consisted
+	stepSlice []*Step[G]
+
+	// current step
+	StepIndex uint16
+
+	// functor to invoke after each step to convey step result and sequence result
 	resultFunctor func(*Sequence[G], bool, bool)
+
+	// for chaining sequence of sequences
+	chainFunctor func(bool)
 }
 
 func NewSequence[G comparable](
 	scheduler *Scheduler[G],
+	releaseGroup bool,
 	groupSlice []G,
 	stepSlice []*Step[G],
 	resultFunctor func(*Sequence[G], bool, bool),
 ) *Sequence[G] {
 	return &Sequence[G]{
 		scheduler:     scheduler,
+		releaseGroup:  releaseGroup,
 		GroupSlice:    groupSlice,
 		stepSlice:     stepSlice,
 		StepIndex:     0,
 		resultFunctor: resultFunctor,
+		chainFunctor:  nil,
 	}
 }
 
 func (s *Sequence[G]) result(stepResult bool) {
-	if s.resultFunctor == nil {
-		return
-	}
-
 	sequenceResult := false
 	if stepResult && s.StepIndex+1 >= uint16(len(s.stepSlice)) {
 		sequenceResult = true
+	}
+
+	defer func() {
+		if s.chainFunctor == nil {
+			return
+		}
+
+		if !stepResult {
+			// sequence interrupted
+			s.chainFunctor(false)
+			return
+		}
+
+		if sequenceResult {
+			// sequence completed
+			s.chainFunctor(true)
+			return
+		}
+
+		// sequence ongoing
+	}()
+
+	if s.resultFunctor == nil {
+		return
 	}
 
 	if s.scheduler.Options().LogDebug {
@@ -72,46 +112,62 @@ func (s *Sequence[G]) result(stepResult bool) {
 	}()
 }
 
-func (s *Sequence[G]) step() {
+func (s *Sequence[G]) enter() error {
+	if s.releaseGroup {
+		s.scheduler.releaseGroupSlice(s.GroupSlice)
+	}
+
+	return s.step()
+}
+
+func (s *Sequence[G]) step() error {
 	stepLen := uint16(len(s.stepSlice))
 
 	for {
 		if s.StepIndex >= stepLen {
-			return
+			return nil
 		}
 
-		immediate, functor := s.stepSlice[s.StepIndex].resolve(s)
+		sync, functor := s.stepSlice[s.StepIndex].resolve(s)
 
 		log.Printf(
-			"%s: sequence group=%+v, step<%d/%d>, immediate=%t",
+			"%s: sequence group=%+v, step<%d/%d>, sync=%t",
 			s.scheduler.Options().LogPrefix,
 			s.GroupSlice,
 			s.StepIndex+1,
 			stepLen,
-			immediate,
+			sync,
 		)
 
 		if functor != nil {
+			var err error
 			func() {
 				defer func() {
 					rec := recover()
 					if rec != nil {
-						log.Printf(
-							"%s: group=%+v, step<%d/%d>, immediate=%t, functor recovered from panic: %+v",
-							s.scheduler.Options().LogPrefix,
+						err = fmt.Errorf(
+							"group=%+v, step<%d/%d>, sync=%t, functor recovered from panic: %+v",
 							s.GroupSlice,
 							s.StepIndex+1,
 							stepLen,
-							immediate,
+							sync,
 							rec,
 						)
+
+						log.Printf("%s: %s", s.scheduler.Options().LogPrefix, err.Error())
 					}
 				}()
-				functor()
+				err = functor()
 			}()
+			if err != nil {
+				// step has failed, sequence interrupted
+				s.result(false)
+
+				return err
+			}
 		}
 
-		if immediate {
+		if sync {
 			// step has completed
 			s.result(true)
 
@@ -119,15 +175,18 @@ func (s *Sequence[G]) step() {
 			s.StepIndex += 1
 			continue
 		} else {
-			// async variant assumed scheduled, defer to callback via processLoop
+			// either async variant has been scheduled, or we are entering a child sequence
+			// defer to callback via processLoop
 			break
 		}
 	}
+
+	return nil
 }
 
-func ActionStep[G comparable](f func()) *Step[G] {
+func ActionStep[G comparable](f func() error) *Step[G] {
 	return &Step[G]{
-		resolve: func(_ *Sequence[G]) (bool, func()) {
+		resolve: func(_ *Sequence[G]) (bool, func() error) {
 			return true, f
 		},
 	}
@@ -135,10 +194,11 @@ func ActionStep[G comparable](f func()) *Step[G] {
 
 func TimerStep[G comparable](d time.Duration) *Step[G] {
 	return &Step[G]{
-		resolve: func(s *Sequence[G]) (bool, func()) {
-			return false, func() {
+		resolve: func(s *Sequence[G]) (bool, func() error) {
+			return false, func() error {
 				timer := time.NewTimer(d)
 				v := NewAsyncVariant[G](
+					false, // group release is already done optionally before start of sequence
 					s.GroupSlice,
 					timer.C,
 					func(scheduler *Scheduler[G], v *AsyncVariant[G], _ interface{}) {
@@ -172,7 +232,28 @@ func TimerStep[G comparable](d time.Duration) *Step[G] {
 					},
 				)
 				s.scheduler.addAsyncVariant(v)
+				return nil
 			}
+		},
+	}
+}
+
+func SequenceStep[G comparable](this *Sequence[G]) *Step[G] {
+	return &Step[G]{
+		resolve: func(parent *Sequence[G]) (bool, func() error) {
+			this.chainFunctor = func(sequenceResult bool) {
+				if sequenceResult {
+					// advance parent sequence
+					parent.StepIndex += 1
+					parent.step()
+				} else {
+					// interrupt parent sequence
+					parent.result(false)
+				}
+			}
+
+			return false, // break parent step loop
+				this.enter // enter child step loop
 		},
 	}
 }

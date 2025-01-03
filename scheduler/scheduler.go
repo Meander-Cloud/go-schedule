@@ -197,6 +197,10 @@ func (s *Scheduler[G]) handle(recv interface{}) bool {
 }
 
 func (s *Scheduler[G]) addAsyncVariant(v *AsyncVariant[G]) {
+	if v.releaseGroup {
+		s.releaseGroupSlice(v.GroupSlice)
+	}
+
 	var handle, index uint16
 
 	rightNode := s.asyncHandleTree.Right()
@@ -254,7 +258,7 @@ func (s *Scheduler[G]) removeAsyncVariant(v *AsyncVariant[G]) func() {
 
 	if v.inRemove {
 		log.Printf(
-			"%s: handle=%d, index=%d, count=%d, group=%+v, already being removed",
+			"%s: handle=%d, index=%d, count=%d, group=%+v, already removed",
 			s.options.LogPrefix,
 			handle,
 			index,
@@ -441,19 +445,11 @@ func (s *Scheduler[G]) releaseGroupSlice(groupSlice []G) {
 }
 
 func (s *Scheduler[G]) scheduleAsyncEvent(event *ScheduleAsyncEvent[G]) {
-	if event.ReleaseGroup {
-		s.releaseGroupSlice(event.AsyncVariant.GroupSlice)
-	}
-
 	s.addAsyncVariant(event.AsyncVariant)
 }
 
 func (s *Scheduler[G]) scheduleSequenceEvent(event *ScheduleSequenceEvent[G]) {
-	if event.ReleaseGroup {
-		s.releaseGroupSlice(event.Sequence.GroupSlice)
-	}
-
-	event.Sequence.step()
+	event.Sequence.enter()
 }
 
 // must be invoked on same goroutine as processLoop

@@ -22,15 +22,13 @@ type ReleaseGroupSliceEvent[G comparable] struct {
 func (*ReleaseGroupSliceEvent[G]) isEvent() {}
 
 type ScheduleAsyncEvent[G comparable] struct {
-	ReleaseGroup bool
 	AsyncVariant *AsyncVariant[G]
 }
 
 func (*ScheduleAsyncEvent[G]) isEvent() {}
 
 type ScheduleSequenceEvent[G comparable] struct {
-	ReleaseGroup bool
-	Sequence     *Sequence[G]
+	Sequence *Sequence[G]
 }
 
 func (*ScheduleSequenceEvent[G]) isEvent() {}

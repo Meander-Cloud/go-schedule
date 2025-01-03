@@ -20,8 +20,8 @@ func test1() {
 	t1 := time.NewTimer(time.Second * 2)
 	s.ProcessAsync(
 		&scheduler.ScheduleAsyncEvent[uint8]{
-			ReleaseGroup: true,
 			AsyncVariant: scheduler.NewAsyncVariant(
+				true,
 				[]uint8{1, 2},
 				t1.C,
 				func(s *scheduler.Scheduler[uint8], v *scheduler.AsyncVariant[uint8], recv interface{}) {
@@ -49,8 +49,8 @@ func test1() {
 	t2 := time.NewTimer(time.Second * 4)
 	s.ProcessAsync(
 		&scheduler.ScheduleAsyncEvent[uint8]{
-			ReleaseGroup: true,
 			AsyncVariant: scheduler.NewAsyncVariant(
+				true,
 				[]uint8{2, 3},
 				t2.C,
 				func(s *scheduler.Scheduler[uint8], v *scheduler.AsyncVariant[uint8], recv interface{}) {
@@ -72,8 +72,8 @@ func test1() {
 	t3 := time.NewTimer(time.Second)
 	s.ProcessAsync(
 		&scheduler.ScheduleAsyncEvent[string]{
-			ReleaseGroup: true,
 			AsyncVariant: scheduler.NewAsyncVariant(
+				true,
 				[]string{"A"},
 				t3.C,
 				nil,
@@ -87,8 +87,8 @@ func test1() {
 	t4 := time.NewTimer(time.Second * 2)
 	s.ProcessAsync(
 		&scheduler.ScheduleAsyncEvent[uint8]{
-			ReleaseGroup: true,
 			AsyncVariant: scheduler.NewAsyncVariant(
+				true,
 				[]uint8{3, 4},
 				t4.C,
 				func(s *scheduler.Scheduler[uint8], v *scheduler.AsyncVariant[uint8], recv interface{}) {
@@ -108,8 +108,8 @@ func test1() {
 	t5 := time.NewTimer(time.Second * 3)
 	s.ProcessAsync(
 		&scheduler.ScheduleAsyncEvent[uint8]{
-			ReleaseGroup: false,
 			AsyncVariant: scheduler.NewAsyncVariant(
+				false,
 				[]uint8{4, 5},
 				t5.C,
 				func(s *scheduler.Scheduler[uint8], v *scheduler.AsyncVariant[uint8], recv interface{}) {
@@ -138,8 +138,8 @@ func test1() {
 
 	s.ProcessAsync(
 		&scheduler.ScheduleAsyncEvent[uint8]{
-			ReleaseGroup: false,
 			AsyncVariant: scheduler.TimerAsync(
+				false,
 				[]uint8{5, 6},
 				time.Second*3,
 				func() {
@@ -154,8 +154,8 @@ func test1() {
 
 	s.ProcessAsync(
 		&scheduler.ScheduleAsyncEvent[uint8]{
-			ReleaseGroup: false,
 			AsyncVariant: scheduler.TickerAsync(
+				false,
 				[]uint8{6, 7},
 				time.Second,
 				func() {
@@ -185,21 +185,24 @@ func test2() {
 	go func() {
 		s.ProcessAsync(
 			&scheduler.ScheduleSequenceEvent[string]{
-				ReleaseGroup: true,
 				Sequence: scheduler.NewSequence(
 					s,
+					true,
 					[]string{"A"},
 					[]*scheduler.Step[string]{
 						scheduler.TimerStep[string](time.Second),
-						scheduler.ActionStep[string](func() {
+						scheduler.ActionStep[string](func() error {
 							log.Printf("action 1")
+							return nil
 						}),
-						scheduler.ActionStep[string](func() {
+						scheduler.ActionStep[string](func() error {
 							log.Printf("action 2")
+							return nil
 						}),
 						scheduler.TimerStep[string](time.Second * 2),
-						scheduler.ActionStep[string](func() {
+						scheduler.ActionStep[string](func() error {
 							log.Printf("action 3")
+							return nil
 						}),
 					},
 					func(s *scheduler.Sequence[string], stepResult bool, sequenceResult bool) {
@@ -221,14 +224,15 @@ func test2() {
 
 		s.ProcessAsync(
 			&scheduler.ScheduleSequenceEvent[string]{
-				ReleaseGroup: true,
 				Sequence: scheduler.NewSequence(
 					s,
+					true,
 					[]string{"B", "C"},
 					[]*scheduler.Step[string]{
 						scheduler.TimerStep[string](time.Second * 5),
-						scheduler.ActionStep[string](func() {
+						scheduler.ActionStep[string](func() error {
 							log.Printf("action 1")
+							return nil
 						}),
 					},
 					func(s *scheduler.Sequence[string], stepResult bool, sequenceResult bool) {
@@ -250,17 +254,19 @@ func test2() {
 
 		s.ProcessAsync(
 			&scheduler.ScheduleSequenceEvent[string]{
-				ReleaseGroup: true,
 				Sequence: scheduler.NewSequence(
 					s,
+					true,
 					[]string{"C", "D"},
 					[]*scheduler.Step[string]{
-						scheduler.ActionStep[string](func() {
+						scheduler.ActionStep[string](func() error {
 							log.Printf("action 1")
+							return nil
 						}),
 						scheduler.TimerStep[string](time.Second * 2),
-						scheduler.ActionStep[string](func() {
+						scheduler.ActionStep[string](func() error {
 							log.Printf("action 2")
+							return nil
 						}),
 						scheduler.TimerStep[string](time.Second * 3),
 					},
@@ -283,17 +289,19 @@ func test2() {
 
 		s.ProcessAsync(
 			&scheduler.ScheduleSequenceEvent[string]{
-				ReleaseGroup: false,
 				Sequence: scheduler.NewSequence(
 					s,
+					false,
 					[]string{"D"},
 					[]*scheduler.Step[string]{
-						scheduler.ActionStep[string](func() {
+						scheduler.ActionStep[string](func() error {
 							log.Printf("action 1")
+							return nil
 						}),
 						scheduler.TimerStep[string](time.Second * 8),
-						scheduler.ActionStep[string](func() {
+						scheduler.ActionStep[string](func() error {
 							log.Printf("action 2")
+							return nil
 						}),
 					},
 					func(s *scheduler.Sequence[string], stepResult bool, sequenceResult bool) {
