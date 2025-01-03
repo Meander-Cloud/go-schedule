@@ -117,6 +117,12 @@ func (s *Sequence[G]) enter() error {
 		s.scheduler.releaseGroupSlice(s.GroupSlice)
 	}
 
+	if len(s.stepSlice) == 0 {
+		// proceed as success
+		s.result(true)
+		return nil
+	}
+
 	return s.step()
 }
 
@@ -139,8 +145,8 @@ func (s *Sequence[G]) step() error {
 			sync,
 		)
 
+		var err error
 		if functor != nil {
-			var err error
 			func() {
 				defer func() {
 					rec := recover()
@@ -153,21 +159,23 @@ func (s *Sequence[G]) step() error {
 							sync,
 							rec,
 						)
-
 						log.Printf("%s: %s", s.scheduler.Options().LogPrefix, err.Error())
 					}
 				}()
 				err = functor()
 			}()
-			if err != nil {
-				// step has failed, sequence interrupted
-				s.result(false)
-
-				return err
-			}
 		}
 
 		if sync {
+			// only check error for sync (e.g. action) steps,
+			// otherwise if a child sequence with action steps fail, it would cause double result invocations on parent,
+			// one in chain functor and another here
+			if err != nil {
+				// step has failed, sequence interrupted
+				s.result(false)
+				return err
+			}
+
 			// step has completed
 			s.result(true)
 
@@ -202,14 +210,11 @@ func TimerStep[G comparable](d time.Duration) *Step[G] {
 					s.GroupSlice,
 					timer.C,
 					func(scheduler *Scheduler[G], v *AsyncVariant[G], _ interface{}) {
-						// first remove triggered timer
-						f := scheduler.removeAsyncVariant(v)
+						// first remove and release triggered timer
+						scheduler.removeAsyncVariant(v)()
 
 						// step has completed
 						s.result(true)
-
-						// invoke release
-						f()
 
 						// advance to next step in sequence
 						s.StepIndex += 1
@@ -243,6 +248,9 @@ func SequenceStep[G comparable](this *Sequence[G]) *Step[G] {
 		resolve: func(parent *Sequence[G]) (bool, func() error) {
 			this.chainFunctor = func(sequenceResult bool) {
 				if sequenceResult {
+					// parent step, which is child sequence, has completed
+					parent.result(true)
+
 					// advance parent sequence
 					parent.StepIndex += 1
 					parent.step()
@@ -250,6 +258,9 @@ func SequenceStep[G comparable](this *Sequence[G]) *Step[G] {
 					// interrupt parent sequence
 					parent.result(false)
 				}
+
+				// reset chain
+				this.chainFunctor = nil
 			}
 
 			return false, // break parent step loop

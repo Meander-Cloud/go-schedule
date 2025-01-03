@@ -1,6 +1,7 @@
 package main
 
 import (
+	"fmt"
 	"log"
 	"time"
 
@@ -327,10 +328,311 @@ func test2() {
 	s.RunSync()
 }
 
+func test3() {
+	s := scheduler.NewScheduler[string](
+		&scheduler.Options{
+			EventChannelLength: scheduler.EventChannelLength,
+			LogPrefix:          "test3",
+			LogDebug:           false,
+		},
+	)
+
+	rf := func(s *scheduler.Sequence[string], stepResult bool, sequenceResult bool) {
+		if !stepResult {
+			log.Printf("group=%+v, sequence interrupted", s.GroupSlice)
+			return
+		}
+
+		if sequenceResult {
+			log.Printf("group=%+v, sequence completed", s.GroupSlice)
+			return
+		}
+	}
+
+	go func() {
+		s.ProcessAsync(
+			&scheduler.ScheduleSequenceEvent[string]{
+				Sequence: scheduler.NewSequence(
+					s,
+					true,
+					[]string{"A"},
+					[]*scheduler.Step[string]{
+						scheduler.TimerStep[string](time.Second),
+						scheduler.ActionStep[string](func() error {
+							log.Printf("parent 1")
+							return nil
+						}),
+						scheduler.SequenceStep(
+							scheduler.NewSequence(
+								s,
+								false,
+								[]string{"A", "B"},
+								[]*scheduler.Step[string]{
+									scheduler.ActionStep[string](func() error {
+										log.Printf("child 1")
+										return nil
+									}),
+									scheduler.TimerStep[string](time.Millisecond * 500),
+								},
+								rf,
+							),
+						),
+						scheduler.ActionStep[string](func() error {
+							log.Printf("parent 2")
+							return nil
+						}),
+						scheduler.TimerStep[string](time.Second),
+						scheduler.SequenceStep(
+							scheduler.NewSequence(
+								s,
+								true,
+								[]string{"A", "C"},
+								[]*scheduler.Step[string]{
+									scheduler.TimerStep[string](time.Millisecond * 500),
+									scheduler.ActionStep[string](func() error {
+										log.Printf("child 2")
+										return nil
+									}),
+								},
+								rf,
+							),
+						),
+						scheduler.ActionStep[string](func() error {
+							log.Printf("parent 3")
+							return nil
+						}),
+					},
+					rf,
+				),
+			},
+		)
+
+		<-time.After(time.Second * 5)
+
+		s.Shutdown()
+	}()
+
+	s.RunSync()
+}
+
+func test4() {
+	s := scheduler.NewScheduler[string](
+		&scheduler.Options{
+			EventChannelLength: scheduler.EventChannelLength,
+			LogPrefix:          "test4",
+			LogDebug:           true,
+		},
+	)
+
+	rf := func(s *scheduler.Sequence[string], stepResult bool, sequenceResult bool) {
+		if !stepResult {
+			log.Printf("group=%+v, sequence interrupted", s.GroupSlice)
+			return
+		}
+
+		if sequenceResult {
+			log.Printf("group=%+v, sequence completed", s.GroupSlice)
+			return
+		}
+	}
+
+	go func() {
+		s.ProcessAsync(
+			&scheduler.ScheduleSequenceEvent[string]{
+				Sequence: scheduler.NewSequence(
+					s,
+					true,
+					[]string{"A"},
+					[]*scheduler.Step[string]{
+						scheduler.SequenceStep(
+							scheduler.NewSequence(
+								s,
+								false,
+								[]string{"B"},
+								[]*scheduler.Step[string]{
+									scheduler.SequenceStep(
+										scheduler.NewSequence(
+											s,
+											true,
+											[]string{"C"},
+											[]*scheduler.Step[string]{
+												scheduler.TimerStep[string](time.Second),
+											},
+											rf,
+										),
+									),
+								},
+								rf,
+							),
+						),
+					},
+					rf,
+				),
+			},
+		)
+
+		<-time.After(time.Second * 3)
+
+		s.ProcessAsync(
+			&scheduler.ScheduleSequenceEvent[string]{
+				Sequence: scheduler.NewSequence(
+					s,
+					true,
+					[]string{"A"},
+					[]*scheduler.Step[string]{
+						scheduler.SequenceStep(
+							scheduler.NewSequence(
+								s,
+								false,
+								[]string{"B"},
+								[]*scheduler.Step[string]{},
+								rf,
+							),
+						),
+					},
+					rf,
+				),
+			},
+		)
+
+		<-time.After(time.Second * 3)
+
+		s.ProcessAsync(
+			&scheduler.ScheduleSequenceEvent[string]{
+				Sequence: scheduler.NewSequence(
+					s,
+					true,
+					[]string{"A"},
+					[]*scheduler.Step[string]{},
+					rf,
+				),
+			},
+		)
+
+		<-time.After(time.Second * 3)
+
+		s.ProcessAsync(
+			&scheduler.ScheduleSequenceEvent[string]{
+				Sequence: scheduler.NewSequence(
+					s,
+					true,
+					[]string{"A"},
+					[]*scheduler.Step[string]{
+						scheduler.ActionStep[string](func() error {
+							err := fmt.Errorf("parent action step fail")
+							log.Printf("%s", err.Error())
+							return err
+						}),
+						scheduler.ActionStep[string](func() error {
+							log.Printf("cannot reach")
+							return nil
+						}),
+					},
+					rf,
+				),
+			},
+		)
+
+		<-time.After(time.Second * 3)
+
+		s.ProcessAsync(
+			&scheduler.ScheduleSequenceEvent[string]{
+				Sequence: scheduler.NewSequence(
+					s,
+					true,
+					[]string{"A"},
+					[]*scheduler.Step[string]{
+						scheduler.SequenceStep(
+							scheduler.NewSequence(
+								s,
+								false,
+								[]string{"B"},
+								[]*scheduler.Step[string]{
+									//scheduler.TimerStep[string](0),
+									scheduler.ActionStep[string](func() error {
+										err := fmt.Errorf("child action step fail")
+										log.Printf("%s", err.Error())
+										return err
+									}),
+									scheduler.ActionStep[string](func() error {
+										log.Printf("cannot reach")
+										return nil
+									}),
+								},
+								nil,
+							),
+						),
+						scheduler.ActionStep[string](func() error {
+							log.Printf("cannot reach")
+							return nil
+						}),
+					},
+					rf,
+				),
+			},
+		)
+
+		<-time.After(time.Second * 3)
+
+		s.ProcessAsync(
+			&scheduler.ScheduleSequenceEvent[string]{
+				Sequence: scheduler.NewSequence(
+					s,
+					true,
+					[]string{"A"},
+					[]*scheduler.Step[string]{
+						scheduler.SequenceStep(
+							scheduler.NewSequence(
+								s,
+								false,
+								[]string{"B"},
+								[]*scheduler.Step[string]{
+									scheduler.SequenceStep(
+										scheduler.NewSequence(
+											s,
+											true,
+											[]string{"C"},
+											[]*scheduler.Step[string]{
+												scheduler.ActionStep[string](func() error {
+													log.Printf("child action step panic")
+
+													var err error
+													log.Printf("%s", err.Error())
+
+													return nil
+												}),
+												scheduler.ActionStep[string](func() error {
+													log.Printf("cannot reach")
+													return nil
+												}),
+											},
+											rf,
+										),
+									),
+								},
+								rf,
+							),
+						),
+					},
+					rf,
+				),
+			},
+		)
+
+		<-time.After(time.Second * 3)
+
+		s.Shutdown()
+	}()
+
+	s.RunSync()
+}
+
 func main() {
 	// enable microsecond and file line logging
 	log.SetFlags(log.LstdFlags | log.Lmicroseconds | log.Lshortfile)
 
 	test1()
 	test2()
+	test3()
+	test4()
 }
