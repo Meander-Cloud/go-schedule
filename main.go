@@ -179,7 +179,7 @@ func test2() {
 		&scheduler.Options{
 			EventChannelLength: scheduler.EventChannelLength,
 			LogPrefix:          "test2",
-			LogDebug:           false,
+			LogDebug:           true,
 		},
 	)
 
@@ -217,6 +217,7 @@ func test2() {
 							return
 						}
 					},
+					scheduler.LogProgressModeRep,
 				),
 			},
 		)
@@ -247,6 +248,7 @@ func test2() {
 							return
 						}
 					},
+					scheduler.LogProgressModeRep,
 				),
 			},
 		)
@@ -282,6 +284,7 @@ func test2() {
 							return
 						}
 					},
+					scheduler.LogProgressModeRep,
 				),
 			},
 		)
@@ -316,6 +319,7 @@ func test2() {
 							return
 						}
 					},
+					scheduler.LogProgressModeRep,
 				),
 			},
 		)
@@ -333,7 +337,7 @@ func test3() {
 		&scheduler.Options{
 			EventChannelLength: scheduler.EventChannelLength,
 			LogPrefix:          "test3",
-			LogDebug:           false,
+			LogDebug:           true,
 		},
 	)
 
@@ -363,6 +367,7 @@ func test3() {
 							return nil
 						}),
 						scheduler.SequenceStep(
+							1,
 							scheduler.NewSequence(
 								s,
 								false,
@@ -375,6 +380,7 @@ func test3() {
 									scheduler.TimerStep[string](time.Millisecond * 500),
 								},
 								rf,
+								scheduler.LogProgressModeRep,
 							),
 						),
 						scheduler.ActionStep[string](func() error {
@@ -383,6 +389,7 @@ func test3() {
 						}),
 						scheduler.TimerStep[string](time.Second),
 						scheduler.SequenceStep(
+							1,
 							scheduler.NewSequence(
 								s,
 								true,
@@ -395,6 +402,7 @@ func test3() {
 									}),
 								},
 								rf,
+								scheduler.LogProgressModeRep,
 							),
 						),
 						scheduler.ActionStep[string](func() error {
@@ -403,6 +411,7 @@ func test3() {
 						}),
 					},
 					rf,
+					scheduler.LogProgressModeRep,
 				),
 			},
 		)
@@ -445,12 +454,14 @@ func test4() {
 					[]string{"A"},
 					[]*scheduler.Step[string]{
 						scheduler.SequenceStep(
+							1,
 							scheduler.NewSequence(
 								s,
 								false,
 								[]string{"B"},
 								[]*scheduler.Step[string]{
 									scheduler.SequenceStep(
+										1,
 										scheduler.NewSequence(
 											s,
 											true,
@@ -459,14 +470,17 @@ func test4() {
 												scheduler.TimerStep[string](time.Second),
 											},
 											rf,
+											scheduler.LogProgressModeRep,
 										),
 									),
 								},
 								rf,
+								scheduler.LogProgressModeRep,
 							),
 						),
 					},
 					rf,
+					scheduler.LogProgressModeRep,
 				),
 			},
 		)
@@ -481,16 +495,19 @@ func test4() {
 					[]string{"A"},
 					[]*scheduler.Step[string]{
 						scheduler.SequenceStep(
+							1,
 							scheduler.NewSequence(
 								s,
 								false,
 								[]string{"B"},
 								[]*scheduler.Step[string]{},
 								rf,
+								scheduler.LogProgressModeRep,
 							),
 						),
 					},
 					rf,
+					scheduler.LogProgressModeRep,
 				),
 			},
 		)
@@ -505,6 +522,7 @@ func test4() {
 					[]string{"A"},
 					[]*scheduler.Step[string]{},
 					rf,
+					scheduler.LogProgressModeRep,
 				),
 			},
 		)
@@ -529,6 +547,7 @@ func test4() {
 						}),
 					},
 					rf,
+					scheduler.LogProgressModeRep,
 				),
 			},
 		)
@@ -543,6 +562,7 @@ func test4() {
 					[]string{"A"},
 					[]*scheduler.Step[string]{
 						scheduler.SequenceStep(
+							1,
 							scheduler.NewSequence(
 								s,
 								false,
@@ -560,6 +580,7 @@ func test4() {
 									}),
 								},
 								nil,
+								scheduler.LogProgressModeRep,
 							),
 						),
 						scheduler.ActionStep[string](func() error {
@@ -568,6 +589,7 @@ func test4() {
 						}),
 					},
 					rf,
+					scheduler.LogProgressModeRep,
 				),
 			},
 		)
@@ -582,12 +604,14 @@ func test4() {
 					[]string{"A"},
 					[]*scheduler.Step[string]{
 						scheduler.SequenceStep(
+							1,
 							scheduler.NewSequence(
 								s,
 								false,
 								[]string{"B"},
 								[]*scheduler.Step[string]{
 									scheduler.SequenceStep(
+										1,
 										scheduler.NewSequence(
 											s,
 											true,
@@ -607,14 +631,17 @@ func test4() {
 												}),
 											},
 											rf,
+											scheduler.LogProgressModeRep,
 										),
 									),
 								},
 								rf,
+								scheduler.LogProgressModeRep,
 							),
 						),
 					},
 					rf,
+					scheduler.LogProgressModeRep,
 				),
 			},
 		)

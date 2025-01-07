@@ -449,7 +449,7 @@ func (s *Scheduler[G]) scheduleAsyncEvent(event *ScheduleAsyncEvent[G]) {
 }
 
 func (s *Scheduler[G]) scheduleSequenceEvent(event *ScheduleSequenceEvent[G]) {
-	event.Sequence.enter()
+	event.Sequence.enter(nil)
 }
 
 // must be invoked on same goroutine as processLoop
