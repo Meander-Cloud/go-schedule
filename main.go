@@ -654,6 +654,499 @@ func test4() {
 	s.RunSync()
 }
 
+func test5() {
+	s := scheduler.NewScheduler[string](
+		&scheduler.Options{
+			EventChannelLength: scheduler.EventChannelLength,
+			LogPrefix:          "test5",
+			LogDebug:           true,
+		},
+	)
+
+	rf := func(s *scheduler.Sequence[string], stepResult bool, sequenceResult bool) {
+		if !stepResult {
+			log.Printf("group=%+v, sequence interrupted", s.GroupSlice)
+			return
+		}
+
+		if sequenceResult {
+			log.Printf("group=%+v, sequence completed", s.GroupSlice)
+			return
+		}
+	}
+
+	go func() {
+		s.ProcessAsync(
+			&scheduler.ScheduleSequenceEvent[string]{
+				Sequence: scheduler.NewSequence(
+					s,
+					true,
+					[]string{"A1"},
+					[]*scheduler.Step[string]{
+						scheduler.SequenceStep(
+							2,
+							scheduler.NewSequence(
+								s,
+								false,
+								[]string{"A2"},
+								[]*scheduler.Step[string]{
+									scheduler.SequenceStep(
+										2,
+										scheduler.NewSequence(
+											s,
+											true,
+											[]string{"A3"},
+											[]*scheduler.Step[string]{
+												scheduler.ActionStep[string](func() error {
+													log.Printf("action A3")
+													return nil
+												}),
+											},
+											rf,
+											scheduler.LogProgressModeRep,
+										),
+									),
+								},
+								rf,
+								scheduler.LogProgressModeRep,
+							),
+						),
+					},
+					rf,
+					scheduler.LogProgressModeRep,
+				),
+			},
+		)
+
+		<-time.After(time.Second * 3)
+
+		s.ProcessAsync(
+			&scheduler.ScheduleSequenceEvent[string]{
+				Sequence: scheduler.NewSequence(
+					s,
+					true,
+					[]string{"B1"},
+					[]*scheduler.Step[string]{
+						scheduler.SequenceStep(
+							2,
+							scheduler.NewSequence(
+								s,
+								false,
+								[]string{"B2"},
+								[]*scheduler.Step[string]{
+									scheduler.SequenceStep(
+										2,
+										scheduler.NewSequence(
+											s,
+											true,
+											[]string{"B3"},
+											[]*scheduler.Step[string]{
+												scheduler.TimerStep[string](time.Second),
+											},
+											rf,
+											scheduler.LogProgressModeRep,
+										),
+									),
+								},
+								rf,
+								scheduler.LogProgressModeRep,
+							),
+						),
+					},
+					rf,
+					scheduler.LogProgressModeRep,
+				),
+			},
+		)
+
+		<-time.After(time.Second * 7)
+
+		s.ProcessAsync(
+			&scheduler.ScheduleSequenceEvent[string]{
+				Sequence: scheduler.NewSequence(
+					s,
+					true,
+					[]string{"C1"},
+					[]*scheduler.Step[string]{
+						scheduler.SequenceStep(
+							2,
+							scheduler.NewSequence(
+								s,
+								false,
+								[]string{"C2"},
+								[]*scheduler.Step[string]{
+									scheduler.ActionStep[string](func() error {
+										log.Printf("action C2")
+										return nil
+									}),
+									scheduler.SequenceStep(
+										2,
+										scheduler.NewSequence(
+											s,
+											true,
+											[]string{"C3"},
+											[]*scheduler.Step[string]{
+												scheduler.ActionStep[string](func() error {
+													log.Printf("action C3")
+													return nil
+												}),
+												scheduler.TimerStep[string](time.Second),
+											},
+											rf,
+											scheduler.LogProgressModeRep,
+										),
+									),
+								},
+								rf,
+								scheduler.LogProgressModeRep,
+							),
+						),
+					},
+					rf,
+					scheduler.LogProgressModeRep,
+				),
+			},
+		)
+
+		<-time.After(time.Second * 7)
+
+		s.ProcessAsync(
+			&scheduler.ScheduleSequenceEvent[string]{
+				Sequence: scheduler.NewSequence(
+					s,
+					true,
+					[]string{"D1"},
+					[]*scheduler.Step[string]{
+						scheduler.SequenceStep(
+							2,
+							scheduler.NewSequence(
+								s,
+								false,
+								[]string{"D2"},
+								[]*scheduler.Step[string]{
+									scheduler.ActionStep[string](func() error {
+										log.Printf("action D2")
+										return nil
+									}),
+									scheduler.SequenceStep(
+										2,
+										scheduler.NewSequence(
+											s,
+											true,
+											[]string{"D3"},
+											[]*scheduler.Step[string]{
+												scheduler.TimerStep[string](time.Second),
+												scheduler.ActionStep[string](func() error {
+													log.Printf("action D3")
+													return nil
+												}),
+											},
+											rf,
+											scheduler.LogProgressModeRep,
+										),
+									),
+								},
+								rf,
+								scheduler.LogProgressModeRep,
+							),
+						),
+					},
+					rf,
+					scheduler.LogProgressModeRep,
+				),
+			},
+		)
+
+		<-time.After(time.Second * 7)
+
+		s.ProcessAsync(
+			&scheduler.ScheduleSequenceEvent[string]{
+				Sequence: scheduler.NewSequence(
+					s,
+					true,
+					[]string{"E1"},
+					[]*scheduler.Step[string]{
+						scheduler.SequenceStep(
+							2,
+							scheduler.NewSequence(
+								s,
+								false,
+								[]string{"E2"},
+								[]*scheduler.Step[string]{
+									scheduler.TimerStep[string](time.Second),
+									scheduler.SequenceStep(
+										2,
+										scheduler.NewSequence(
+											s,
+											true,
+											[]string{"E3"},
+											[]*scheduler.Step[string]{
+												scheduler.ActionStep[string](func() error {
+													log.Printf("action E3")
+													return nil
+												}),
+												scheduler.TimerStep[string](time.Second),
+											},
+											rf,
+											scheduler.LogProgressModeRep,
+										),
+									),
+								},
+								rf,
+								scheduler.LogProgressModeRep,
+							),
+						),
+					},
+					rf,
+					scheduler.LogProgressModeRep,
+				),
+			},
+		)
+
+		<-time.After(time.Second * 9)
+
+		s.ProcessAsync(
+			&scheduler.ScheduleSequenceEvent[string]{
+				Sequence: scheduler.NewSequence(
+					s,
+					true,
+					[]string{"F1"},
+					[]*scheduler.Step[string]{
+						scheduler.SequenceStep(
+							2,
+							scheduler.NewSequence(
+								s,
+								false,
+								[]string{"F2"},
+								[]*scheduler.Step[string]{
+									scheduler.TimerStep[string](time.Second),
+									scheduler.SequenceStep(
+										2,
+										scheduler.NewSequence(
+											s,
+											true,
+											[]string{"F3"},
+											[]*scheduler.Step[string]{
+												scheduler.TimerStep[string](time.Second),
+												scheduler.ActionStep[string](func() error {
+													log.Printf("action F3")
+													return nil
+												}),
+											},
+											rf,
+											scheduler.LogProgressModeRep,
+										),
+									),
+								},
+								rf,
+								scheduler.LogProgressModeRep,
+							),
+						),
+					},
+					rf,
+					scheduler.LogProgressModeRep,
+				),
+			},
+		)
+
+		<-time.After(time.Second * 9)
+
+		s.ProcessAsync(
+			&scheduler.ScheduleSequenceEvent[string]{
+				Sequence: scheduler.NewSequence(
+					s,
+					true,
+					[]string{"G1"},
+					[]*scheduler.Step[string]{
+						scheduler.SequenceStep(
+							2,
+							scheduler.NewSequence(
+								s,
+								false,
+								[]string{"G2"},
+								[]*scheduler.Step[string]{
+									scheduler.SequenceStep(
+										2,
+										scheduler.NewSequence(
+											s,
+											true,
+											[]string{"G3"},
+											[]*scheduler.Step[string]{
+												scheduler.ActionStep[string](func() error {
+													log.Printf("action G3")
+													return nil
+												}),
+												scheduler.TimerStep[string](time.Second),
+											},
+											rf,
+											scheduler.LogProgressModeRep,
+										),
+									),
+									scheduler.ActionStep[string](func() error {
+										log.Printf("action G2")
+										return nil
+									}),
+								},
+								rf,
+								scheduler.LogProgressModeRep,
+							),
+						),
+					},
+					rf,
+					scheduler.LogProgressModeRep,
+				),
+			},
+		)
+
+		<-time.After(time.Second * 7)
+
+		s.ProcessAsync(
+			&scheduler.ScheduleSequenceEvent[string]{
+				Sequence: scheduler.NewSequence(
+					s,
+					true,
+					[]string{"H1"},
+					[]*scheduler.Step[string]{
+						scheduler.SequenceStep(
+							2,
+							scheduler.NewSequence(
+								s,
+								false,
+								[]string{"H2"},
+								[]*scheduler.Step[string]{
+									scheduler.SequenceStep(
+										2,
+										scheduler.NewSequence(
+											s,
+											true,
+											[]string{"H3"},
+											[]*scheduler.Step[string]{
+												scheduler.TimerStep[string](time.Second),
+												scheduler.ActionStep[string](func() error {
+													log.Printf("action H3")
+													return nil
+												}),
+											},
+											rf,
+											scheduler.LogProgressModeRep,
+										),
+									),
+									scheduler.ActionStep[string](func() error {
+										log.Printf("action H2")
+										return nil
+									}),
+								},
+								rf,
+								scheduler.LogProgressModeRep,
+							),
+						),
+					},
+					rf,
+					scheduler.LogProgressModeRep,
+				),
+			},
+		)
+
+		<-time.After(time.Second * 7)
+
+		s.ProcessAsync(
+			&scheduler.ScheduleSequenceEvent[string]{
+				Sequence: scheduler.NewSequence(
+					s,
+					true,
+					[]string{"I1"},
+					[]*scheduler.Step[string]{
+						scheduler.SequenceStep(
+							2,
+							scheduler.NewSequence(
+								s,
+								false,
+								[]string{"I2"},
+								[]*scheduler.Step[string]{
+									scheduler.SequenceStep(
+										2,
+										scheduler.NewSequence(
+											s,
+											true,
+											[]string{"I3"},
+											[]*scheduler.Step[string]{
+												scheduler.ActionStep[string](func() error {
+													log.Printf("action I3")
+													return nil
+												}),
+												scheduler.TimerStep[string](time.Second),
+											},
+											rf,
+											scheduler.LogProgressModeRep,
+										),
+									),
+									scheduler.TimerStep[string](time.Second),
+								},
+								rf,
+								scheduler.LogProgressModeRep,
+							),
+						),
+					},
+					rf,
+					scheduler.LogProgressModeRep,
+				),
+			},
+		)
+
+		<-time.After(time.Second * 9)
+
+		s.ProcessAsync(
+			&scheduler.ScheduleSequenceEvent[string]{
+				Sequence: scheduler.NewSequence(
+					s,
+					true,
+					[]string{"J1"},
+					[]*scheduler.Step[string]{
+						scheduler.SequenceStep(
+							2,
+							scheduler.NewSequence(
+								s,
+								false,
+								[]string{"J2"},
+								[]*scheduler.Step[string]{
+									scheduler.SequenceStep(
+										2,
+										scheduler.NewSequence(
+											s,
+											true,
+											[]string{"J3"},
+											[]*scheduler.Step[string]{
+												scheduler.TimerStep[string](time.Second),
+												scheduler.ActionStep[string](func() error {
+													log.Printf("action J3")
+													return nil
+												}),
+											},
+											rf,
+											scheduler.LogProgressModeRep,
+										),
+									),
+									scheduler.TimerStep[string](time.Second),
+								},
+								rf,
+								scheduler.LogProgressModeRep,
+							),
+						),
+					},
+					rf,
+					scheduler.LogProgressModeRep,
+				),
+			},
+		)
+
+		<-time.After(time.Second * 9)
+
+		s.Shutdown()
+	}()
+
+	s.RunSync()
+}
+
 func main() {
 	// enable microsecond and file line logging
 	log.SetFlags(log.LstdFlags | log.Lmicroseconds | log.Lshortfile)
@@ -662,4 +1155,5 @@ func main() {
 	test2()
 	test3()
 	test4()
+	test5()
 }
