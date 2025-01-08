@@ -10,6 +10,9 @@ type Step[G comparable] struct {
 	// sequence containing this step, associated at runtime
 	q *Sequence[G]
 
+	// type of step
+	stepType StepType
+
 	// functor to invoke at each rep
 	repFunctor func(*Step[G]) (bool, error)
 
@@ -68,7 +71,8 @@ func NewSequence[G comparable](
 
 func ActionStep[G comparable](f func() error) *Step[G] {
 	return &Step[G]{
-		q: nil,
+		q:        nil,
+		stepType: StepTypeAction,
 		repFunctor: func(*Step[G]) (bool, error) {
 			return true, f()
 		},
@@ -79,7 +83,8 @@ func ActionStep[G comparable](f func() error) *Step[G] {
 
 func TimerStep[G comparable](d time.Duration) *Step[G] {
 	return &Step[G]{
-		q: nil,
+		q:        nil,
+		stepType: StepTypeTimer,
 		repFunctor: func(p *Step[G]) (bool, error) {
 			timer := time.NewTimer(d)
 
@@ -124,7 +129,8 @@ func SequenceStep[G comparable](
 	q *Sequence[G],
 ) *Step[G] {
 	return &Step[G]{
-		q: nil, // note that this field stores containing sequence, not input sequence which comprise this step
+		q:        nil, // note that this field stores containing sequence, not input sequence which comprise this step
+		stepType: StepTypeSequence,
 		repFunctor: func(p *Step[G]) (bool, error) {
 			return q.enter(p)
 		},
@@ -164,11 +170,12 @@ func (p *Step[G]) rep(inSyncLoop bool) (bool, error) {
 	for {
 		if p.q.logProgressMode == LogProgressModeRep {
 			log.Printf(
-				"%s: group=%+v, step<%d/%d>, rep<%d/%d>",
+				"%s: group=%+v, step<%d/%d>, type=%s, rep<%d/%d>",
 				p.q.s.options.LogPrefix,
 				p.q.GroupSlice,
 				p.q.StepIndex+1,
 				len(p.q.stepSlice),
+				p.stepType,
 				p.repCount+1,
 				p.repTotal,
 			)
@@ -183,10 +190,11 @@ func (p *Step[G]) rep(inSyncLoop bool) (bool, error) {
 					// panic, synchronous error
 					sync = true
 					err = fmt.Errorf(
-						"group=%+v, step<%d/%d>, rep<%d/%d>, functor recovered from panic: %+v",
+						"group=%+v, step<%d/%d>, type=%s, rep<%d/%d>, functor recovered from panic: %+v",
 						p.q.GroupSlice,
 						p.q.StepIndex+1,
 						len(p.q.stepSlice),
+						p.stepType,
 						p.repCount+1,
 						p.repTotal,
 						rec,
@@ -290,17 +298,20 @@ func (q *Sequence[G]) step(inSyncLoop bool) (bool, error) {
 	stepLen := uint16(len(q.stepSlice))
 
 	for {
+		p := q.stepSlice[q.StepIndex]
+
 		if q.logProgressMode == LogProgressModeStep {
 			log.Printf(
-				"%s: group=%+v, step<%d/%d>",
+				"%s: group=%+v, step<%d/%d>, type=%s",
 				q.s.options.LogPrefix,
 				q.GroupSlice,
 				q.StepIndex+1,
 				stepLen,
+				p.stepType,
 			)
 		}
 
-		sync, err := q.stepSlice[q.StepIndex].take(q)
+		sync, err := p.take(q)
 
 		if sync {
 			if err != nil {
