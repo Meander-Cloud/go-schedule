@@ -206,9 +206,9 @@ func test2() {
 							return nil
 						}),
 					},
-					func(s *scheduler.Sequence[string], stepResult bool, sequenceResult bool) {
+					func(s *scheduler.Sequence[string], stepIndex uint16, stepResult bool, sequenceResult bool) {
 						if !stepResult {
-							log.Printf("group=%+v, sequence interrupted", s.GroupSlice)
+							log.Printf("group=%+v, sequence interrupted at stepIndex=%d", s.GroupSlice, stepIndex)
 							return
 						}
 
@@ -237,9 +237,9 @@ func test2() {
 							return nil
 						}),
 					},
-					func(s *scheduler.Sequence[string], stepResult bool, sequenceResult bool) {
+					func(s *scheduler.Sequence[string], stepIndex uint16, stepResult bool, sequenceResult bool) {
 						if !stepResult {
-							log.Printf("group=%+v, sequence interrupted", s.GroupSlice)
+							log.Printf("group=%+v, sequence interrupted at stepIndex=%d", s.GroupSlice, stepIndex)
 							return
 						}
 
@@ -273,9 +273,9 @@ func test2() {
 						}),
 						scheduler.TimerStep[string](time.Second * 3),
 					},
-					func(s *scheduler.Sequence[string], stepResult bool, sequenceResult bool) {
+					func(s *scheduler.Sequence[string], stepIndex uint16, stepResult bool, sequenceResult bool) {
 						if !stepResult {
-							log.Printf("group=%+v, sequence interrupted", s.GroupSlice)
+							log.Printf("group=%+v, sequence interrupted at stepIndex=%d", s.GroupSlice, stepIndex)
 							return
 						}
 
@@ -308,9 +308,9 @@ func test2() {
 							return nil
 						}),
 					},
-					func(s *scheduler.Sequence[string], stepResult bool, sequenceResult bool) {
+					func(s *scheduler.Sequence[string], stepIndex uint16, stepResult bool, sequenceResult bool) {
 						if !stepResult {
-							log.Printf("group=%+v, sequence interrupted", s.GroupSlice)
+							log.Printf("group=%+v, sequence interrupted at stepIndex=%d", s.GroupSlice, stepIndex)
 							return
 						}
 
@@ -341,9 +341,9 @@ func test3() {
 		},
 	)
 
-	rf := func(s *scheduler.Sequence[string], stepResult bool, sequenceResult bool) {
+	rf := func(s *scheduler.Sequence[string], stepIndex uint16, stepResult bool, sequenceResult bool) {
 		if !stepResult {
-			log.Printf("group=%+v, sequence interrupted", s.GroupSlice)
+			log.Printf("group=%+v, sequence interrupted at stepIndex=%d", s.GroupSlice, stepIndex)
 			return
 		}
 
@@ -433,9 +433,9 @@ func test4() {
 		},
 	)
 
-	rf := func(s *scheduler.Sequence[string], stepResult bool, sequenceResult bool) {
+	rf := func(s *scheduler.Sequence[string], stepIndex uint16, stepResult bool, sequenceResult bool) {
 		if !stepResult {
-			log.Printf("group=%+v, sequence interrupted", s.GroupSlice)
+			log.Printf("group=%+v, sequence interrupted at stepIndex=%d", s.GroupSlice, stepIndex)
 			return
 		}
 
@@ -663,9 +663,9 @@ func test5() {
 		},
 	)
 
-	rf := func(s *scheduler.Sequence[string], stepResult bool, sequenceResult bool) {
+	rf := func(s *scheduler.Sequence[string], stepIndex uint16, stepResult bool, sequenceResult bool) {
 		if !stepResult {
-			log.Printf("group=%+v, sequence interrupted", s.GroupSlice)
+			log.Printf("group=%+v, sequence interrupted at stepIndex=%d", s.GroupSlice, stepIndex)
 			return
 		}
 
@@ -1147,6 +1147,111 @@ func test5() {
 	s.RunSync()
 }
 
+func test6() {
+	s := scheduler.NewScheduler[string](
+		&scheduler.Options{
+			EventChannelLength: scheduler.EventChannelLength,
+			LogPrefix:          "test6",
+			LogDebug:           true,
+		},
+	)
+
+	rf := func(s *scheduler.Sequence[string], stepIndex uint16, stepResult bool, sequenceResult bool) {
+		if !stepResult {
+			log.Printf("group=%+v, sequence interrupted at stepIndex=%d", s.GroupSlice, stepIndex)
+			return
+		}
+
+		if sequenceResult {
+			log.Printf("group=%+v, sequence completed", s.GroupSlice)
+			return
+		}
+	}
+
+	go func() {
+		q1 := scheduler.NewSequence(
+			s,
+			true,
+			[]string{"A1"},
+			[]*scheduler.Step[string]{
+				scheduler.SequenceStep(
+					2,
+					scheduler.NewSequence(
+						s,
+						true,
+						[]string{"A2"},
+						[]*scheduler.Step[string]{
+							scheduler.SequenceStep(
+								2,
+								scheduler.NewSequence(
+									s,
+									true,
+									[]string{"A3-1"},
+									[]*scheduler.Step[string]{
+										scheduler.ActionStep[string](func() error {
+											log.Printf("action A3-1-1")
+											return nil
+										}),
+										scheduler.ActionStep[string](func() error {
+											log.Printf("action A3-1-2")
+											return nil
+										}),
+										scheduler.ActionStep[string](func() error {
+											log.Printf("action A3-1-3")
+											return nil
+										}),
+									},
+									rf,
+									scheduler.LogProgressModeRep,
+								),
+							),
+							scheduler.SequenceStep(
+								2,
+								scheduler.NewSequence(
+									s,
+									true,
+									[]string{"A3-2"},
+									[]*scheduler.Step[string]{
+										scheduler.TimerStep[string](time.Millisecond * 200),
+										scheduler.TimerStep[string](time.Millisecond * 200),
+										scheduler.TimerStep[string](time.Millisecond * 200),
+									},
+									rf,
+									scheduler.LogProgressModeRep,
+								),
+							),
+						},
+						rf,
+						scheduler.LogProgressModeRep,
+					),
+				),
+			},
+			rf,
+			scheduler.LogProgressModeRep,
+		)
+
+		s.ProcessAsync(
+			&scheduler.ScheduleSequenceEvent[string]{
+				Sequence: q1,
+			},
+		)
+
+		<-time.After(time.Second * 4)
+
+		s.ProcessAsync(
+			&scheduler.ScheduleSequenceEvent[string]{
+				Sequence: q1,
+			},
+		)
+
+		<-time.After(time.Second * 4)
+
+		s.Shutdown()
+	}()
+
+	s.RunSync()
+}
+
 func main() {
 	// enable microsecond and file line logging
 	log.SetFlags(log.LstdFlags | log.Lmicroseconds | log.Lshortfile)
@@ -1156,4 +1261,5 @@ func main() {
 	test3()
 	test4()
 	test5()
+	test6()
 }

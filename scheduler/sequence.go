@@ -7,8 +7,8 @@ import (
 )
 
 type Step[G comparable] struct {
-	// sequence containing this step, associated at runtime
-	q *Sequence[G]
+	// parent sequence containing this step, associated at runtime
+	pq *Sequence[G]
 
 	// type of step
 	stepType StepType
@@ -27,23 +27,24 @@ type Sequence[G comparable] struct {
 	// associated scheduler processing this sequence
 	s *Scheduler[G]
 
-	// parent step this sequence is associated with, if any
+	// parent step containing this sequence if any, associated at runtime
 	pp *Step[G]
 
 	// whether to release groups first when entering this sequence
 	releaseGroup bool
 
 	// groups to which this sequence belongs
+	// note: modifying post initialization would be undefined behavior
 	GroupSlice []G
 
 	// steps of which this sequence is consisted
 	stepSlice []*Step[G]
 
 	// current step
-	StepIndex uint16
+	stepIndex uint16
 
 	// functor to invoke after each step to convey step result and sequence result
-	resultFunctor func(*Sequence[G], bool, bool)
+	resultFunctor func(*Sequence[G], uint16, bool, bool)
 
 	// progress logging mode
 	logProgressMode LogProgressMode
@@ -54,7 +55,7 @@ func NewSequence[G comparable](
 	releaseGroup bool,
 	groupSlice []G,
 	stepSlice []*Step[G],
-	resultFunctor func(*Sequence[G], bool, bool),
+	resultFunctor func(*Sequence[G], uint16, bool, bool),
 	logProgressMode LogProgressMode,
 ) *Sequence[G] {
 	return &Sequence[G]{
@@ -63,7 +64,7 @@ func NewSequence[G comparable](
 		releaseGroup:    releaseGroup,
 		GroupSlice:      groupSlice,
 		stepSlice:       stepSlice,
-		StepIndex:       0,
+		stepIndex:       0,
 		resultFunctor:   resultFunctor,
 		logProgressMode: logProgressMode,
 	}
@@ -71,7 +72,7 @@ func NewSequence[G comparable](
 
 func ActionStep[G comparable](f func() error) *Step[G] {
 	return &Step[G]{
-		q:        nil,
+		pq:       nil,
 		stepType: StepTypeAction,
 		repFunctor: func(*Step[G]) (bool, error) {
 			return true, f()
@@ -83,14 +84,14 @@ func ActionStep[G comparable](f func() error) *Step[G] {
 
 func TimerStep[G comparable](d time.Duration) *Step[G] {
 	return &Step[G]{
-		q:        nil,
+		pq:       nil,
 		stepType: StepTypeTimer,
 		repFunctor: func(p *Step[G]) (bool, error) {
 			timer := time.NewTimer(d)
 
 			v := NewAsyncVariant[G](
 				false, // group release is already done optionally before start of sequence
-				p.q.GroupSlice,
+				p.pq.GroupSlice,
 				timer.C,
 				func(s *Scheduler[G], v *AsyncVariant[G], _ interface{}) {
 					// remove and release triggered timer
@@ -115,7 +116,7 @@ func TimerStep[G comparable](d time.Duration) *Step[G] {
 					p.asyncRepFail()
 				},
 			)
-			p.q.s.addAsyncVariant(v)
+			p.pq.s.addAsyncVariant(v)
 
 			return false, nil
 		},
@@ -129,7 +130,7 @@ func SequenceStep[G comparable](
 	q *Sequence[G],
 ) *Step[G] {
 	return &Step[G]{
-		q:        nil, // note that this field stores containing sequence, not input sequence which comprise this step
+		pq:       nil, // note that this field stores containing sequence, not input sequence which comprise this step
 		stepType: StepTypeSequence,
 		repFunctor: func(p *Step[G]) (bool, error) {
 			return q.enter(p)
@@ -139,9 +140,14 @@ func SequenceStep[G comparable](
 	}
 }
 
-func (p *Step[G]) take(q *Sequence[G]) (bool, error) {
+func (p *Step[G]) reset() {
+	p.pq = nil
+	p.repCount = 0
+}
+
+func (p *Step[G]) take(pq *Sequence[G]) (bool, error) {
 	// initialize step
-	p.q = q
+	p.pq = pq
 	p.repCount = 0
 
 	return p.rep(true)
@@ -152,8 +158,10 @@ func (p *Step[G]) asyncRepDone() {
 	p.repCount += 1
 
 	if p.repCount >= p.repTotal {
-		// all reps done, up call to advance sequence
-		p.q.asyncStepDone()
+		// all reps done, up call to advance parent sequence
+		pq := p.pq
+		p.reset()
+		pq.asyncStepDone()
 		return
 	}
 
@@ -162,19 +170,21 @@ func (p *Step[G]) asyncRepDone() {
 }
 
 func (p *Step[G]) asyncRepFail() {
-	// up call to interrupt sequence
-	p.q.asyncStepFail()
+	// up call to interrupt parent sequence
+	pq := p.pq
+	p.reset()
+	pq.asyncStepFail()
 }
 
 func (p *Step[G]) rep(inSyncLoop bool) (bool, error) {
 	for {
-		if p.q.logProgressMode == LogProgressModeRep {
+		if p.pq.logProgressMode == LogProgressModeRep {
 			log.Printf(
 				"%s: group=%+v, step<%d/%d>, type=%s, rep<%d/%d>",
-				p.q.s.options.LogPrefix,
-				p.q.GroupSlice,
-				p.q.StepIndex+1,
-				len(p.q.stepSlice),
+				p.pq.s.options.LogPrefix,
+				p.pq.GroupSlice,
+				p.pq.stepIndex+1,
+				len(p.pq.stepSlice),
 				p.stepType,
 				p.repCount+1,
 				p.repTotal,
@@ -190,16 +200,17 @@ func (p *Step[G]) rep(inSyncLoop bool) (bool, error) {
 					// panic, synchronous error
 					sync = true
 					err = fmt.Errorf(
-						"group=%+v, step<%d/%d>, type=%s, rep<%d/%d>, functor recovered from panic: %+v",
-						p.q.GroupSlice,
-						p.q.StepIndex+1,
-						len(p.q.stepSlice),
+						"%s: group=%+v, step<%d/%d>, type=%s, rep<%d/%d>, functor recovered from panic: %+v",
+						p.pq.s.options.LogPrefix,
+						p.pq.GroupSlice,
+						p.pq.stepIndex+1,
+						len(p.pq.stepSlice),
 						p.stepType,
 						p.repCount+1,
 						p.repTotal,
 						rec,
 					)
-					log.Printf("%s: %s", p.q.s.options.LogPrefix, err.Error())
+					log.Printf("%s", err.Error())
 				}
 			}()
 			sync, err = p.repFunctor(p)
@@ -209,11 +220,14 @@ func (p *Step[G]) rep(inSyncLoop bool) (bool, error) {
 			if err != nil {
 				// rep failed
 				if inSyncLoop {
-					// rewind stack for caller to interrupt sequence synchronously
+					// rewind stack for caller to interrupt parent sequence synchronously
+					p.reset()
 					return true, err
 				} else {
-					// call stack not in synchronous loop, up call to interrupt sequence
-					p.q.asyncStepFail()
+					// call stack not in synchronous loop, up call to interrupt parent sequence
+					pq := p.pq
+					p.reset()
+					pq.asyncStepFail()
 					return false, err
 				}
 			}
@@ -234,20 +248,29 @@ func (p *Step[G]) rep(inSyncLoop bool) (bool, error) {
 		}
 	}
 
+	// all reps done
 	if inSyncLoop {
-		// rewind stack for caller to advance sequence synchronously
+		// rewind stack for caller to advance parent sequence synchronously
+		p.reset()
 		return true, nil
 	} else {
-		// call stack not in synchronous loop, up call to advance sequence
-		p.q.asyncStepDone()
+		// call stack not in synchronous loop, up call to advance parent sequence
+		pq := p.pq
+		p.reset()
+		pq.asyncStepDone()
 		return false, nil
 	}
+}
+
+func (q *Sequence[G]) reset() {
+	q.pp = nil
+	q.stepIndex = 0
 }
 
 func (q *Sequence[G]) enter(pp *Step[G]) (bool, error) {
 	// initialize sequence
 	q.pp = pp
-	q.StepIndex = 0
+	q.stepIndex = 0
 
 	if q.releaseGroup {
 		q.s.releaseGroupSlice(q.GroupSlice)
@@ -257,7 +280,8 @@ func (q *Sequence[G]) enter(pp *Step[G]) (bool, error) {
 		// proceed as success
 		q.result(true)
 
-		// rewind stack for caller to advance parent step (if any) synchronously
+		// rewind stack for caller to advance parent step synchronously, if any
+		q.reset()
 		return true, nil
 	}
 
@@ -269,14 +293,16 @@ func (q *Sequence[G]) asyncStepDone() {
 	q.result(true)
 
 	// advance step
-	q.StepIndex += 1
+	q.stepIndex += 1
 
 	stepLen := uint16(len(q.stepSlice))
-	if q.StepIndex >= stepLen {
-		// all steps in sequence completed
-		if q.pp != nil {
+	if q.stepIndex >= stepLen {
+		// all steps completed
+		pp := q.pp
+		q.reset()
+		if pp != nil {
 			// up call to advance parent step, if any
-			q.pp.asyncRepDone()
+			pp.asyncRepDone()
 		}
 		return
 	}
@@ -288,9 +314,11 @@ func (q *Sequence[G]) asyncStepFail() {
 	// step failed
 	q.result(false)
 
-	if q.pp != nil {
+	pp := q.pp
+	q.reset()
+	if pp != nil {
 		// up call to interrupt parent step, if any
-		q.pp.asyncRepFail()
+		pp.asyncRepFail()
 	}
 }
 
@@ -298,14 +326,14 @@ func (q *Sequence[G]) step(inSyncLoop bool) (bool, error) {
 	stepLen := uint16(len(q.stepSlice))
 
 	for {
-		p := q.stepSlice[q.StepIndex]
+		p := q.stepSlice[q.stepIndex]
 
 		if q.logProgressMode == LogProgressModeStep {
 			log.Printf(
 				"%s: group=%+v, step<%d/%d>, type=%s",
 				q.s.options.LogPrefix,
 				q.GroupSlice,
-				q.StepIndex+1,
+				q.stepIndex+1,
 				stepLen,
 				p.stepType,
 			)
@@ -319,12 +347,15 @@ func (q *Sequence[G]) step(inSyncLoop bool) (bool, error) {
 				q.result(false)
 
 				if inSyncLoop {
-					// rewind stack for caller to interrupt parent step (if any) synchronously
+					// rewind stack for caller to interrupt parent step synchronously, if any
+					q.reset()
 					return true, err
 				} else {
 					// call stack not in synchronous loop, up call to interrupt parent step, if any
-					if q.pp != nil {
-						q.pp.asyncRepFail()
+					pp := q.pp
+					q.reset()
+					if pp != nil {
+						pp.asyncRepFail()
 					}
 					return false, err
 				}
@@ -334,10 +365,10 @@ func (q *Sequence[G]) step(inSyncLoop bool) (bool, error) {
 			q.result(true)
 
 			// advance step
-			q.StepIndex += 1
+			q.stepIndex += 1
 
-			if q.StepIndex >= stepLen {
-				// all steps in sequence completed
+			if q.stepIndex >= stepLen {
+				// all steps completed
 				break
 			} else {
 				continue
@@ -348,13 +379,17 @@ func (q *Sequence[G]) step(inSyncLoop bool) (bool, error) {
 		}
 	}
 
+	// all steps completed
 	if inSyncLoop {
-		// rewind stack for caller to advance parent step (if any) synchronously
+		// rewind stack for caller to advance parent step synchronously, if any
+		q.reset()
 		return true, nil
 	} else {
 		// call stack not in synchronous loop, up call to advance parent step, if any
-		if q.pp != nil {
-			q.pp.asyncRepDone()
+		pp := q.pp
+		q.reset()
+		if pp != nil {
+			pp.asyncRepDone()
 		}
 		return false, nil
 	}
@@ -366,7 +401,7 @@ func (q *Sequence[G]) result(stepResult bool) {
 	}
 
 	sequenceResult := false
-	if stepResult && q.StepIndex+1 >= uint16(len(q.stepSlice)) {
+	if stepResult && q.stepIndex+1 >= uint16(len(q.stepSlice)) {
 		sequenceResult = true
 	}
 
@@ -375,7 +410,7 @@ func (q *Sequence[G]) result(stepResult bool) {
 			"%s: invoking result group=%+v, stepIndex=%d, stepResult=%t, sequenceResult=%t",
 			q.s.options.LogPrefix,
 			q.GroupSlice,
-			q.StepIndex,
+			q.stepIndex,
 			stepResult,
 			sequenceResult,
 		)
@@ -389,13 +424,13 @@ func (q *Sequence[G]) result(stepResult bool) {
 					"%s: group=%+v, stepIndex=%d, stepResult=%t, sequenceResult=%t, result functor recovered from panic: %+v",
 					q.s.options.LogPrefix,
 					q.GroupSlice,
-					q.StepIndex,
+					q.stepIndex,
 					stepResult,
 					sequenceResult,
 					rec,
 				)
 			}
 		}()
-		q.resultFunctor(q, stepResult, sequenceResult)
+		q.resultFunctor(q, q.stepIndex, stepResult, sequenceResult)
 	}()
 }
