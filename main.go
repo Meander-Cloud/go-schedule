@@ -11,9 +11,8 @@ import (
 func test1() {
 	s := scheduler.NewScheduler[uint8](
 		&scheduler.Options{
-			EventChannelLength: scheduler.EventChannelLength,
-			LogPrefix:          "test1",
-			LogDebug:           true,
+			LogPrefix: "test1",
+			LogDebug:  true,
 		},
 	)
 	s.RunAsync()
@@ -177,9 +176,8 @@ func test1() {
 func test2() {
 	s := scheduler.NewScheduler[string](
 		&scheduler.Options{
-			EventChannelLength: scheduler.EventChannelLength,
-			LogPrefix:          "test2",
-			LogDebug:           true,
+			LogPrefix: "test2",
+			LogDebug:  true,
 		},
 	)
 
@@ -206,14 +204,14 @@ func test2() {
 							return nil
 						}),
 					},
-					func(s *scheduler.Sequence[string], stepIndex uint16, stepResult bool, sequenceResult bool) {
+					func(q *scheduler.Sequence[string], stepIndex uint16, stepResult bool, sequenceResult bool) {
 						if !stepResult {
-							log.Printf("group=%+v, sequence interrupted at stepIndex=%d", s.GroupSlice, stepIndex)
+							log.Printf("group=%+v, sequence interrupted at stepIndex=%d", q.GroupSlice, stepIndex)
 							return
 						}
 
 						if sequenceResult {
-							log.Printf("group=%+v, sequence completed", s.GroupSlice)
+							log.Printf("group=%+v, sequence completed", q.GroupSlice)
 							return
 						}
 					},
@@ -237,14 +235,14 @@ func test2() {
 							return nil
 						}),
 					},
-					func(s *scheduler.Sequence[string], stepIndex uint16, stepResult bool, sequenceResult bool) {
+					func(q *scheduler.Sequence[string], stepIndex uint16, stepResult bool, sequenceResult bool) {
 						if !stepResult {
-							log.Printf("group=%+v, sequence interrupted at stepIndex=%d", s.GroupSlice, stepIndex)
+							log.Printf("group=%+v, sequence interrupted at stepIndex=%d", q.GroupSlice, stepIndex)
 							return
 						}
 
 						if sequenceResult {
-							log.Printf("group=%+v, sequence completed", s.GroupSlice)
+							log.Printf("group=%+v, sequence completed", q.GroupSlice)
 							return
 						}
 					},
@@ -273,14 +271,14 @@ func test2() {
 						}),
 						scheduler.TimerStep[string](time.Second * 3),
 					},
-					func(s *scheduler.Sequence[string], stepIndex uint16, stepResult bool, sequenceResult bool) {
+					func(q *scheduler.Sequence[string], stepIndex uint16, stepResult bool, sequenceResult bool) {
 						if !stepResult {
-							log.Printf("group=%+v, sequence interrupted at stepIndex=%d", s.GroupSlice, stepIndex)
+							log.Printf("group=%+v, sequence interrupted at stepIndex=%d", q.GroupSlice, stepIndex)
 							return
 						}
 
 						if sequenceResult {
-							log.Printf("group=%+v, sequence completed", s.GroupSlice)
+							log.Printf("group=%+v, sequence completed", q.GroupSlice)
 							return
 						}
 					},
@@ -308,14 +306,14 @@ func test2() {
 							return nil
 						}),
 					},
-					func(s *scheduler.Sequence[string], stepIndex uint16, stepResult bool, sequenceResult bool) {
+					func(q *scheduler.Sequence[string], stepIndex uint16, stepResult bool, sequenceResult bool) {
 						if !stepResult {
-							log.Printf("group=%+v, sequence interrupted at stepIndex=%d", s.GroupSlice, stepIndex)
+							log.Printf("group=%+v, sequence interrupted at stepIndex=%d", q.GroupSlice, stepIndex)
 							return
 						}
 
 						if sequenceResult {
-							log.Printf("group=%+v, sequence completed", s.GroupSlice)
+							log.Printf("group=%+v, sequence completed", q.GroupSlice)
 							return
 						}
 					},
@@ -335,20 +333,19 @@ func test2() {
 func test3() {
 	s := scheduler.NewScheduler[string](
 		&scheduler.Options{
-			EventChannelLength: scheduler.EventChannelLength,
-			LogPrefix:          "test3",
-			LogDebug:           true,
+			LogPrefix: "test3",
+			LogDebug:  true,
 		},
 	)
 
-	rf := func(s *scheduler.Sequence[string], stepIndex uint16, stepResult bool, sequenceResult bool) {
+	rf := func(q *scheduler.Sequence[string], stepIndex uint16, stepResult bool, sequenceResult bool) {
 		if !stepResult {
-			log.Printf("group=%+v, sequence interrupted at stepIndex=%d", s.GroupSlice, stepIndex)
+			log.Printf("group=%+v, sequence interrupted at stepIndex=%d", q.GroupSlice, stepIndex)
 			return
 		}
 
 		if sequenceResult {
-			log.Printf("group=%+v, sequence completed", s.GroupSlice)
+			log.Printf("group=%+v, sequence completed", q.GroupSlice)
 			return
 		}
 	}
@@ -427,20 +424,19 @@ func test3() {
 func test4() {
 	s := scheduler.NewScheduler[string](
 		&scheduler.Options{
-			EventChannelLength: scheduler.EventChannelLength,
-			LogPrefix:          "test4",
-			LogDebug:           true,
+			LogPrefix: "test4",
+			LogDebug:  true,
 		},
 	)
 
-	rf := func(s *scheduler.Sequence[string], stepIndex uint16, stepResult bool, sequenceResult bool) {
+	rf := func(q *scheduler.Sequence[string], stepIndex uint16, stepResult bool, sequenceResult bool) {
 		if !stepResult {
-			log.Printf("group=%+v, sequence interrupted at stepIndex=%d", s.GroupSlice, stepIndex)
+			log.Printf("group=%+v, sequence interrupted at stepIndex=%d", q.GroupSlice, stepIndex)
 			return
 		}
 
 		if sequenceResult {
-			log.Printf("group=%+v, sequence completed", s.GroupSlice)
+			log.Printf("group=%+v, sequence completed", q.GroupSlice)
 			return
 		}
 	}
@@ -657,20 +653,19 @@ func test4() {
 func test5() {
 	s := scheduler.NewScheduler[string](
 		&scheduler.Options{
-			EventChannelLength: scheduler.EventChannelLength,
-			LogPrefix:          "test5",
-			LogDebug:           true,
+			LogPrefix: "test5",
+			LogDebug:  true,
 		},
 	)
 
-	rf := func(s *scheduler.Sequence[string], stepIndex uint16, stepResult bool, sequenceResult bool) {
+	rf := func(q *scheduler.Sequence[string], stepIndex uint16, stepResult bool, sequenceResult bool) {
 		if !stepResult {
-			log.Printf("group=%+v, sequence interrupted at stepIndex=%d", s.GroupSlice, stepIndex)
+			log.Printf("group=%+v, sequence interrupted at stepIndex=%d", q.GroupSlice, stepIndex)
 			return
 		}
 
 		if sequenceResult {
-			log.Printf("group=%+v, sequence completed", s.GroupSlice)
+			log.Printf("group=%+v, sequence completed", q.GroupSlice)
 			return
 		}
 	}
@@ -1150,20 +1145,19 @@ func test5() {
 func test6() {
 	s := scheduler.NewScheduler[string](
 		&scheduler.Options{
-			EventChannelLength: scheduler.EventChannelLength,
-			LogPrefix:          "test6",
-			LogDebug:           true,
+			LogPrefix: "test6",
+			LogDebug:  true,
 		},
 	)
 
-	rf := func(s *scheduler.Sequence[string], stepIndex uint16, stepResult bool, sequenceResult bool) {
+	rf := func(q *scheduler.Sequence[string], stepIndex uint16, stepResult bool, sequenceResult bool) {
 		if !stepResult {
-			log.Printf("group=%+v, sequence interrupted at stepIndex=%d", s.GroupSlice, stepIndex)
+			log.Printf("group=%+v, sequence interrupted at stepIndex=%d", q.GroupSlice, stepIndex)
 			return
 		}
 
 		if sequenceResult {
-			log.Printf("group=%+v, sequence completed", s.GroupSlice)
+			log.Printf("group=%+v, sequence completed", q.GroupSlice)
 			return
 		}
 	}

@@ -1,9 +1,5 @@
 package scheduler
 
-const (
-	EventChannelLength uint16 = 1024
-)
-
 type LogProgressMode uint8
 
 const (

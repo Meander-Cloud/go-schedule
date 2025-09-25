@@ -7,12 +7,11 @@ import (
 	"sync"
 
 	rbt "github.com/emirpasic/gods/v2/trees/redblacktree"
+
+	"github.com/Meander-Cloud/go-chdyn/chdyn"
 )
 
 type Options struct {
-	// specify length for event channel, if zero default will be used
-	EventChannelLength uint16
-
 	// logging prefix
 	LogPrefix string
 
@@ -24,7 +23,7 @@ type Scheduler[G comparable] struct {
 	options *Options
 
 	exitwg  sync.WaitGroup
-	eventch chan Event
+	eventch *chdyn.Chan[Event]
 
 	// group -> context
 	groupContextMap map[G]*GroupContext[G]
@@ -37,18 +36,18 @@ type Scheduler[G comparable] struct {
 }
 
 func NewScheduler[G comparable](options *Options) *Scheduler[G] {
-	var eventChannelLength uint16
-	if options.EventChannelLength == 0 {
-		eventChannelLength = EventChannelLength
-	} else {
-		eventChannelLength = options.EventChannelLength
-	}
-
 	return &Scheduler[G]{
 		options: options,
 
-		exitwg:  sync.WaitGroup{},
-		eventch: make(chan Event, eventChannelLength),
+		exitwg: sync.WaitGroup{},
+		eventch: chdyn.New(
+			&chdyn.Options[Event]{
+				InSize:    chdyn.InSize,
+				OutSize:   chdyn.OutSize,
+				LogPrefix: options.LogPrefix,
+				LogDebug:  options.LogDebug,
+			},
+		),
 
 		groupContextMap: make(map[G]*GroupContext[G]),
 		asyncHandleTree: rbt.New[uint16, *AsyncVariant[G]](),
@@ -61,7 +60,7 @@ func (s *Scheduler[G]) Shutdown() {
 	log.Printf("%s: synchronized shutdown starting", s.options.LogPrefix)
 
 	select {
-	case s.eventch <- &exitEvent{}:
+	case s.eventch.In() <- &exitEvent{}:
 	default:
 		log.Printf("%s: exit already signaled", s.options.LogPrefix)
 	}
@@ -101,13 +100,16 @@ func (s *Scheduler[G]) RunAsync() {
 func (s *Scheduler[G]) processLoop() {
 	// main event processing loop, will block
 	// caller can choose to run synchronously on caller goroutine, or spawn a separate goroutine to run asynchronously
+	defer func() {
+		s.eventch.Stop()
+	}()
 
 	// zero index must be case eventch
 	s.selectCaseSlice = append(
 		s.selectCaseSlice,
 		reflect.SelectCase{
 			Dir:  reflect.SelectRecv,
-			Chan: reflect.ValueOf(s.eventch),
+			Chan: reflect.ValueOf(s.eventch.Out()),
 		},
 	)
 
@@ -459,9 +461,5 @@ func (s *Scheduler[G]) ProcessSync(event Event) {
 
 // can be invoked on any goroutine
 func (s *Scheduler[G]) ProcessAsync(event Event) {
-	select {
-	case s.eventch <- event:
-	default:
-		log.Printf("%s: failed to push to eventch", s.options.LogPrefix)
-	}
+	s.eventch.In() <- event
 }
