@@ -1246,6 +1246,17 @@ func test6() {
 	s.RunSync()
 }
 
+func test7() {
+	s := scheduler.NewScheduler[string](
+		&scheduler.Options{
+			LogPrefix: "test7",
+			LogDebug:  true,
+		},
+	)
+
+	s.Shutdown()
+}
+
 func main() {
 	// enable microsecond and file line logging
 	log.SetFlags(log.LstdFlags | log.Lmicroseconds | log.Lshortfile)
@@ -1256,4 +1267,5 @@ func main() {
 	test4()
 	test5()
 	test6()
+	test7()
 }

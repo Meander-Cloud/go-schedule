@@ -66,6 +66,7 @@ func (s *Scheduler[G]) Shutdown() {
 	}
 
 	s.exitwg.Wait()
+	s.eventch.Stop()
 	log.Printf("%s: synchronized shutdown done", s.options.LogPrefix)
 }
 
@@ -75,11 +76,15 @@ func (s *Scheduler[G]) Options() *Options {
 
 func (s *Scheduler[G]) RunSync() {
 	s.exitwg.Add(1)
-	defer s.exitwg.Done()
 
 	log.Printf("%s: synchronous process loop starting", s.options.LogPrefix)
+
+	defer func() {
+		log.Printf("%s: synchronous process loop exiting", s.options.LogPrefix)
+		s.exitwg.Done()
+	}()
+
 	s.processLoop()
-	log.Printf("%s: synchronous process loop exiting", s.options.LogPrefix)
 }
 
 func (s *Scheduler[G]) RunAsync() {
@@ -97,13 +102,9 @@ func (s *Scheduler[G]) RunAsync() {
 	}()
 }
 
+// main event processing loop, will block;
+// caller can choose to run synchronously on caller goroutine, or spawn a separate goroutine to run asynchronously
 func (s *Scheduler[G]) processLoop() {
-	// main event processing loop, will block
-	// caller can choose to run synchronously on caller goroutine, or spawn a separate goroutine to run asynchronously
-	defer func() {
-		s.eventch.Stop()
-	}()
-
 	// zero index must be case eventch
 	s.selectCaseSlice = append(
 		s.selectCaseSlice,
