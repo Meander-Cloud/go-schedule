@@ -5,9 +5,25 @@ import (
 	"time"
 )
 
-type AsyncVariant[G comparable] struct {
+type AsyncVariantArgs[G comparable] struct {
 	// whether to release groups first before scheduling
-	releaseGroup bool
+	ReleaseGroup bool
+
+	// groups to which this async variant belongs
+	GroupTracker *GroupTracker[G]
+
+	// channel to register for dynamic select
+	Chan interface{}
+
+	// functor to invoke upon select
+	SelectFunc func(*Scheduler[G], *AsyncVariant[G], interface{})
+
+	// functor to invoke to release associated resources
+	ReleaseFunc func(*Scheduler[G], *AsyncVariant[G])
+}
+
+type AsyncVariant[G comparable] struct {
+	args *AsyncVariantArgs[G]
 
 	// whether this async variant is being removed
 	inRemove bool
@@ -18,175 +34,187 @@ type AsyncVariant[G comparable] struct {
 	// index linking to selectIndexTree, note this may change during runtime
 	selectIndex uint16
 
-	// groups to which this async variant belongs
-	GroupSlice []G
-
-	// channel to register for dynamic select
-	ch interface{}
-
-	// number of times this async variant had been selected
-	SelectCount uint32
-
-	// functor to invoke upon select
-	selectFunctor func(*Scheduler[G], *AsyncVariant[G], interface{})
-
-	// functor to invoke to release associated resources
-	releaseFunctor func(*Scheduler[G], *AsyncVariant[G])
+	// number of times this async variant has been selected
+	selectCount uint32
 }
 
-func NewAsyncVariant[G comparable](
-	releaseGroup bool,
-	groupSlice []G,
-	ch interface{},
-	selectFunctor func(*Scheduler[G], *AsyncVariant[G], interface{}),
-	releaseFunctor func(*Scheduler[G], *AsyncVariant[G]),
-) *AsyncVariant[G] {
+func NewAsyncVariant[G comparable](args *AsyncVariantArgs[G]) *AsyncVariant[G] {
+	if args == nil {
+		log.Printf("AsyncVariant: nil args")
+		return nil
+	}
+
 	return &AsyncVariant[G]{
-		releaseGroup: releaseGroup,
-		inRemove:     false,
-
-		// populated in addAsyncVariant
-		asyncHandle: 0,
-		selectIndex: 0,
-
-		GroupSlice:     groupSlice,
-		ch:             ch,
-		SelectCount:    0,
-		selectFunctor:  selectFunctor,
-		releaseFunctor: releaseFunctor,
+		args:        args,
+		inRemove:    false,
+		asyncHandle: 0, // populated in addAsyncVariant
+		selectIndex: 0, // populated in addAsyncVariant
+		selectCount: 0,
 	}
 }
 
-func TimerAsync[G comparable](
-	releaseGroup bool,
-	groupSlice []G,
-	d time.Duration,
-	selectFunctor func(),
-	releaseFunctor func(uint32),
-) *AsyncVariant[G] {
-	timer := time.NewTimer(d)
-	return NewAsyncVariant[G](
-		releaseGroup,
-		groupSlice,
-		timer.C,
-		func(s *Scheduler[G], v *AsyncVariant[G], _ interface{}) {
-			// first remove triggered timer
-			f := s.removeAsyncVariant(v)
+func (v *AsyncVariant[G]) PrintGroup() string {
+	return v.args.GroupTracker.Print()
+}
 
-			if selectFunctor != nil {
-				func() {
-					defer func() {
-						rec := recover()
-						if rec != nil {
-							log.Printf(
-								"%s: handle=%d, index=%d, count=%d, group=%+v, user select functor recovered from panic: %+v",
-								s.options.LogPrefix,
-								v.asyncHandle,
-								v.selectIndex,
-								v.SelectCount,
-								v.GroupSlice,
-								rec,
-							)
-						}
+func (v *AsyncVariant[G]) SelectCount() uint32 {
+	return v.selectCount
+}
+
+type TimerAsyncArgs[G comparable] struct {
+	ReleaseGroup bool
+	GroupSlice   []G
+	Delay        time.Duration
+	SelectFunc   func()
+	ReleaseFunc  func(uint32)
+}
+
+func TimerAsync[G comparable](args *TimerAsyncArgs[G]) *AsyncVariant[G] {
+	if args == nil {
+		log.Printf("TimerAsync: nil args")
+		return nil
+	}
+
+	timer := time.NewTimer(args.Delay)
+
+	return NewAsyncVariant(
+		&AsyncVariantArgs[G]{
+			ReleaseGroup: args.ReleaseGroup,
+			GroupTracker: NewGroupTracker(args.GroupSlice),
+			Chan:         timer.C,
+			SelectFunc: func(s *Scheduler[G], v *AsyncVariant[G], _ interface{}) {
+				// first remove triggered timer
+				f := s.removeAsyncVariant(v)
+
+				if args.SelectFunc != nil {
+					func() {
+						defer func() {
+							rec := recover()
+							if rec != nil {
+								log.Printf(
+									"%s<tim-var-sel>: group=%s, handle=%d, index=%d, count=%d, functor recovered from panic: %+v",
+									s.options.LogPrefix,
+									v.PrintGroup(),
+									v.asyncHandle,
+									v.selectIndex,
+									v.selectCount,
+									rec,
+								)
+							}
+						}()
+
+						args.SelectFunc()
 					}()
-					selectFunctor()
-				}()
-			}
-
-			// invoke release
-			f()
-		},
-		func(s *Scheduler[G], v *AsyncVariant[G]) {
-			if v.SelectCount == 0 {
-				timer.Stop()
-				select {
-				case <-timer.C:
-				default:
 				}
-			}
 
-			if releaseFunctor != nil {
-				func() {
-					defer func() {
-						rec := recover()
-						if rec != nil {
-							log.Printf(
-								"%s: handle=%d, index=%d, count=%d, group=%+v, user release functor recovered from panic: %+v",
-								s.options.LogPrefix,
-								v.asyncHandle,
-								v.selectIndex,
-								v.SelectCount,
-								v.GroupSlice,
-								rec,
-							)
-						}
+				// invoke release
+				f()
+			},
+			ReleaseFunc: func(s *Scheduler[G], v *AsyncVariant[G]) {
+				if v.selectCount == 0 {
+					timer.Stop()
+					select {
+					case <-timer.C:
+					default:
+					}
+				}
+
+				if args.ReleaseFunc != nil {
+					func() {
+						defer func() {
+							rec := recover()
+							if rec != nil {
+								log.Printf(
+									"%s<tim-var-rel>: group=%s, handle=%d, index=%d, count=%d, functor recovered from panic: %+v",
+									s.options.LogPrefix,
+									v.PrintGroup(),
+									v.asyncHandle,
+									v.selectIndex,
+									v.selectCount,
+									rec,
+								)
+							}
+						}()
+
+						args.ReleaseFunc(v.selectCount)
 					}()
-					releaseFunctor(v.SelectCount)
-				}()
-			}
+				}
+			},
 		},
 	)
 }
 
-func TickerAsync[G comparable](
-	releaseGroup bool,
-	groupSlice []G,
-	d time.Duration,
-	selectFunctor func(),
-	releaseFunctor func(uint32),
-) *AsyncVariant[G] {
-	ticker := time.NewTicker(d)
-	return NewAsyncVariant[G](
-		releaseGroup,
-		groupSlice,
-		ticker.C,
-		func(s *Scheduler[G], v *AsyncVariant[G], _ interface{}) {
-			if selectFunctor != nil {
-				func() {
-					defer func() {
-						rec := recover()
-						if rec != nil {
-							log.Printf(
-								"%s: handle=%d, index=%d, count=%d, group=%+v, user select functor recovered from panic: %+v",
-								s.options.LogPrefix,
-								v.asyncHandle,
-								v.selectIndex,
-								v.SelectCount,
-								v.GroupSlice,
-								rec,
-							)
-						}
-					}()
-					selectFunctor()
-				}()
-			}
-		},
-		func(s *Scheduler[G], v *AsyncVariant[G]) {
-			ticker.Stop()
-			select {
-			case <-ticker.C:
-			default:
-			}
+type TickerAsyncArgs[G comparable] struct {
+	ReleaseGroup bool
+	GroupSlice   []G
+	Interval     time.Duration
+	SelectFunc   func()
+	ReleaseFunc  func(uint32)
+}
 
-			if releaseFunctor != nil {
-				func() {
-					defer func() {
-						rec := recover()
-						if rec != nil {
-							log.Printf(
-								"%s: handle=%d, index=%d, count=%d, group=%+v, user release functor recovered from panic: %+v",
-								s.options.LogPrefix,
-								v.asyncHandle,
-								v.selectIndex,
-								v.SelectCount,
-								v.GroupSlice,
-								rec,
-							)
-						}
+func TickerAsync[G comparable](args *TickerAsyncArgs[G]) *AsyncVariant[G] {
+	if args == nil {
+		log.Printf("TickerAsync: nil args")
+		return nil
+	}
+
+	ticker := time.NewTicker(args.Interval)
+
+	return NewAsyncVariant(
+		&AsyncVariantArgs[G]{
+			ReleaseGroup: args.ReleaseGroup,
+			GroupTracker: NewGroupTracker(args.GroupSlice),
+			Chan:         ticker.C,
+			SelectFunc: func(s *Scheduler[G], v *AsyncVariant[G], _ interface{}) {
+				if args.SelectFunc != nil {
+					func() {
+						defer func() {
+							rec := recover()
+							if rec != nil {
+								log.Printf(
+									"%s<tic-var-sel>: group=%s, handle=%d, index=%d, count=%d, functor recovered from panic: %+v",
+									s.options.LogPrefix,
+									v.PrintGroup(),
+									v.asyncHandle,
+									v.selectIndex,
+									v.selectCount,
+									rec,
+								)
+							}
+						}()
+
+						args.SelectFunc()
 					}()
-					releaseFunctor(v.SelectCount)
-				}()
-			}
+				}
+			},
+			ReleaseFunc: func(s *Scheduler[G], v *AsyncVariant[G]) {
+				ticker.Stop()
+				select {
+				case <-ticker.C:
+				default:
+				}
+
+				if args.ReleaseFunc != nil {
+					func() {
+						defer func() {
+							rec := recover()
+							if rec != nil {
+								log.Printf(
+									"%s<tic-var-rel>: group=%s, handle=%d, index=%d, count=%d, functor recovered from panic: %+v",
+									s.options.LogPrefix,
+									v.PrintGroup(),
+									v.asyncHandle,
+									v.selectIndex,
+									v.selectCount,
+									rec,
+								)
+							}
+						}()
+
+						args.ReleaseFunc(v.selectCount)
+					}()
+				}
+			},
 		},
 	)
 }

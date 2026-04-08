@@ -4,8 +4,8 @@ type LogProgressMode uint8
 
 const (
 	LogProgressModeNone LogProgressMode = 0
-	LogProgressModeStep LogProgressMode = 1
-	LogProgressModeRep  LogProgressMode = 2
+	LogProgressModeRep  LogProgressMode = 1
+	LogProgressModeStep LogProgressMode = 2
 )
 
 type StepType uint8
@@ -29,5 +29,20 @@ func (t StepType) String() string {
 		return "sequence"
 	default:
 		return "unknown"
+	}
+}
+
+func (t StepType) Abbr() string {
+	switch t {
+	case StepTypeInvalid:
+		return "inv"
+	case StepTypeAction:
+		return "act"
+	case StepTypeTimer:
+		return "tim"
+	case StepTypeSequence:
+		return "seq"
+	default:
+		return "unk"
 	}
 }

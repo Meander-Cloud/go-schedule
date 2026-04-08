@@ -21,24 +21,26 @@ func test1() {
 	s.ProcessAsync(
 		&scheduler.ScheduleAsyncEvent[uint8]{
 			AsyncVariant: scheduler.NewAsyncVariant(
-				true,
-				[]uint8{1, 2},
-				t1.C,
-				func(s *scheduler.Scheduler[uint8], v *scheduler.AsyncVariant[uint8], recv interface{}) {
-					log.Printf("t1: selected, selectCount=%d, recv=%+v", v.SelectCount, recv)
-					s.ProcessSync(
-						&scheduler.ReleaseGroupEvent[uint8]{
-							Group: 1,
-						},
-					)
-					log.Printf("t1: selected, done")
-				},
-				func(s *scheduler.Scheduler[uint8], v *scheduler.AsyncVariant[uint8]) {
-					log.Printf("t1: released, selectCount=%d", v.SelectCount)
-					if v.SelectCount > 0 {
-						return
-					}
-					t1.Stop()
+				&scheduler.AsyncVariantArgs[uint8]{
+					ReleaseGroup: true,
+					GroupTracker: scheduler.NewGroupTracker([]uint8{1, 2}),
+					Chan:         t1.C,
+					SelectFunc: func(s *scheduler.Scheduler[uint8], v *scheduler.AsyncVariant[uint8], recv interface{}) {
+						log.Printf("t1: selected, selectCount=%d, recv=%+v", v.SelectCount(), recv)
+						s.ProcessSync(
+							&scheduler.ReleaseGroupEvent[uint8]{
+								Group: 1,
+							},
+						)
+						log.Printf("t1: selected, done")
+					},
+					ReleaseFunc: func(s *scheduler.Scheduler[uint8], v *scheduler.AsyncVariant[uint8]) {
+						log.Printf("t1: released, selectCount=%d", v.SelectCount())
+						if v.SelectCount() > 0 {
+							return
+						}
+						t1.Stop()
+					},
 				},
 			),
 		},
@@ -50,18 +52,20 @@ func test1() {
 	s.ProcessAsync(
 		&scheduler.ScheduleAsyncEvent[uint8]{
 			AsyncVariant: scheduler.NewAsyncVariant(
-				true,
-				[]uint8{2, 3},
-				t2.C,
-				func(s *scheduler.Scheduler[uint8], v *scheduler.AsyncVariant[uint8], recv interface{}) {
-					log.Printf("t2: selected, selectCount=%d, recv=%+v", v.SelectCount, recv)
-				},
-				func(s *scheduler.Scheduler[uint8], v *scheduler.AsyncVariant[uint8]) {
-					log.Printf("t2: released, selectCount=%d", v.SelectCount)
-					if v.SelectCount > 0 {
-						return
-					}
-					t2.Stop()
+				&scheduler.AsyncVariantArgs[uint8]{
+					ReleaseGroup: true,
+					GroupTracker: scheduler.NewGroupTracker([]uint8{2, 3}),
+					Chan:         t2.C,
+					SelectFunc: func(s *scheduler.Scheduler[uint8], v *scheduler.AsyncVariant[uint8], recv interface{}) {
+						log.Printf("t2: selected, selectCount=%d, recv=%+v", v.SelectCount(), recv)
+					},
+					ReleaseFunc: func(s *scheduler.Scheduler[uint8], v *scheduler.AsyncVariant[uint8]) {
+						log.Printf("t2: released, selectCount=%d", v.SelectCount())
+						if v.SelectCount() > 0 {
+							return
+						}
+						t2.Stop()
+					},
 				},
 			),
 		},
@@ -73,11 +77,13 @@ func test1() {
 	s.ProcessAsync(
 		&scheduler.ScheduleAsyncEvent[string]{
 			AsyncVariant: scheduler.NewAsyncVariant(
-				true,
-				[]string{"A"},
-				t3.C,
-				nil,
-				nil,
+				&scheduler.AsyncVariantArgs[string]{
+					ReleaseGroup: true,
+					GroupTracker: scheduler.NewGroupTracker([]string{"A"}),
+					Chan:         t3.C,
+					SelectFunc:   nil,
+					ReleaseFunc:  nil,
+				},
 			),
 		},
 	)
@@ -88,18 +94,20 @@ func test1() {
 	s.ProcessAsync(
 		&scheduler.ScheduleAsyncEvent[uint8]{
 			AsyncVariant: scheduler.NewAsyncVariant(
-				true,
-				[]uint8{3, 4},
-				t4.C,
-				func(s *scheduler.Scheduler[uint8], v *scheduler.AsyncVariant[uint8], recv interface{}) {
-					log.Printf("t4: selected, selectCount=%d, recv=%+v", v.SelectCount, recv)
-				},
-				func(s *scheduler.Scheduler[uint8], v *scheduler.AsyncVariant[uint8]) {
-					log.Printf("t4: released, selectCount=%d", v.SelectCount)
-					if v.SelectCount > 0 {
-						return
-					}
-					t4.Stop()
+				&scheduler.AsyncVariantArgs[uint8]{
+					ReleaseGroup: true,
+					GroupTracker: scheduler.NewGroupTracker([]uint8{3, 4}),
+					Chan:         t4.C,
+					SelectFunc: func(s *scheduler.Scheduler[uint8], v *scheduler.AsyncVariant[uint8], recv interface{}) {
+						log.Printf("t4: selected, selectCount=%d, recv=%+v", v.SelectCount(), recv)
+					},
+					ReleaseFunc: func(s *scheduler.Scheduler[uint8], v *scheduler.AsyncVariant[uint8]) {
+						log.Printf("t4: released, selectCount=%d", v.SelectCount())
+						if v.SelectCount() > 0 {
+							return
+						}
+						t4.Stop()
+					},
 				},
 			),
 		},
@@ -109,18 +117,20 @@ func test1() {
 	s.ProcessAsync(
 		&scheduler.ScheduleAsyncEvent[uint8]{
 			AsyncVariant: scheduler.NewAsyncVariant(
-				false,
-				[]uint8{4, 5},
-				t5.C,
-				func(s *scheduler.Scheduler[uint8], v *scheduler.AsyncVariant[uint8], recv interface{}) {
-					log.Printf("t5: selected, selectCount=%d, recv=%+v", v.SelectCount, recv)
-				},
-				func(s *scheduler.Scheduler[uint8], v *scheduler.AsyncVariant[uint8]) {
-					log.Printf("t5: released, selectCount=%d", v.SelectCount)
-					if v.SelectCount > 0 {
-						return
-					}
-					t5.Stop()
+				&scheduler.AsyncVariantArgs[uint8]{
+					ReleaseGroup: false,
+					GroupTracker: scheduler.NewGroupTracker([]uint8{4, 5}),
+					Chan:         t5.C,
+					SelectFunc: func(s *scheduler.Scheduler[uint8], v *scheduler.AsyncVariant[uint8], recv interface{}) {
+						log.Printf("t5: selected, selectCount=%d, recv=%+v", v.SelectCount(), recv)
+					},
+					ReleaseFunc: func(s *scheduler.Scheduler[uint8], v *scheduler.AsyncVariant[uint8]) {
+						log.Printf("t5: released, selectCount=%d", v.SelectCount())
+						if v.SelectCount() > 0 {
+							return
+						}
+						t5.Stop()
+					},
 				},
 			),
 		},
@@ -139,14 +149,16 @@ func test1() {
 	s.ProcessAsync(
 		&scheduler.ScheduleAsyncEvent[uint8]{
 			AsyncVariant: scheduler.TimerAsync(
-				false,
-				[]uint8{5, 6},
-				time.Second*3,
-				func() {
-					log.Printf("TimerAsync: selected")
-				},
-				func(selectCount uint32) {
-					log.Printf("TimerAsync: released, selectCount=%d", selectCount)
+				&scheduler.TimerAsyncArgs[uint8]{
+					ReleaseGroup: false,
+					GroupSlice:   []uint8{5, 6},
+					Delay:        time.Second * 3,
+					SelectFunc: func() {
+						log.Printf("TimerAsync: selected")
+					},
+					ReleaseFunc: func(selectCount uint32) {
+						log.Printf("TimerAsync: released, selectCount=%d", selectCount)
+					},
 				},
 			),
 		},
@@ -155,14 +167,16 @@ func test1() {
 	s.ProcessAsync(
 		&scheduler.ScheduleAsyncEvent[uint8]{
 			AsyncVariant: scheduler.TickerAsync(
-				false,
-				[]uint8{6, 7},
-				time.Second,
-				func() {
-					log.Printf("TickerAsync: selected")
-				},
-				func(selectCount uint32) {
-					log.Printf("TickerAsync: released, selectCount=%d", selectCount)
+				&scheduler.TickerAsyncArgs[uint8]{
+					ReleaseGroup: false,
+					GroupSlice:   []uint8{6, 7},
+					Interval:     time.Second,
+					SelectFunc: func() {
+						log.Printf("TickerAsync: selected")
+					},
+					ReleaseFunc: func(selectCount uint32) {
+						log.Printf("TickerAsync: released, selectCount=%d", selectCount)
+					},
 				},
 			),
 		},
@@ -185,37 +199,43 @@ func test2() {
 		s.ProcessAsync(
 			&scheduler.ScheduleSequenceEvent[string]{
 				Sequence: scheduler.NewSequence(
-					s,
-					true,
-					[]string{"A"},
-					[]*scheduler.Step[string]{
-						scheduler.TimerStep[string](time.Second),
-						scheduler.ActionStep[string](func() error {
-							log.Printf("action 1")
-							return nil
-						}),
-						scheduler.ActionStep[string](func() error {
-							log.Printf("action 2")
-							return nil
-						}),
-						scheduler.TimerStep[string](time.Second * 2),
-						scheduler.ActionStep[string](func() error {
-							log.Printf("action 3")
-							return nil
-						}),
+					&scheduler.SequenceArgs[string]{
+						Scheduler:    s,
+						InheritGroup: false,
+						ReleaseGroup: true,
+						GroupSlice:   []string{"A"},
+						StepSlice: []*scheduler.Step[string]{
+							scheduler.TimerStep(&scheduler.TimerStepArgs[string]{Delay: time.Second}),
+							scheduler.ActionStep(&scheduler.ActionStepArgs[string]{Action: func() error {
+								log.Printf("action 1")
+								return nil
+							}}),
+							scheduler.ActionStep(&scheduler.ActionStepArgs[string]{Action: func() error {
+								log.Printf("action 2")
+								return nil
+							}}),
+							scheduler.TimerStep(&scheduler.TimerStepArgs[string]{Delay: time.Second * 2}),
+							scheduler.ActionStep(&scheduler.ActionStepArgs[string]{Action: func() error {
+								log.Printf("action 3")
+								return nil
+							}}),
+						},
+						StepResultFunc: func(p *scheduler.Step[string], result bool) {
+							if result {
+								log.Printf("group=%s, step<%d/%d>, type=%s, rep<%d/%d>, step completed", p.PrintGroup(), p.StepNum(), p.StepLen(), p.Descriptor(), p.RepNum(), p.RepTotal())
+							} else {
+								log.Printf("group=%s, step<%d/%d>, type=%s, rep<%d/%d>, step interrupted", p.PrintGroup(), p.StepNum(), p.StepLen(), p.Descriptor(), p.RepNum(), p.RepTotal())
+							}
+						},
+						SequenceResultFunc: func(q *scheduler.Sequence[string], result bool) {
+							if result {
+								log.Printf("group=%s, step<%d/%d>, sequence completed", q.PrintGroup(), q.StepNum(), q.StepLen())
+							} else {
+								log.Printf("group=%s, step<%d/%d>, sequence interrupted", q.PrintGroup(), q.StepNum(), q.StepLen())
+							}
+						},
+						LogProgressMode: scheduler.LogProgressModeRep,
 					},
-					func(q *scheduler.Sequence[string], stepIndex uint16, stepResult bool, sequenceResult bool) {
-						if !stepResult {
-							log.Printf("group=%+v, sequence interrupted at stepIndex=%d", q.GroupSlice, stepIndex)
-							return
-						}
-
-						if sequenceResult {
-							log.Printf("group=%+v, sequence completed", q.GroupSlice)
-							return
-						}
-					},
-					scheduler.LogProgressModeRep,
 				),
 			},
 		)
@@ -225,28 +245,34 @@ func test2() {
 		s.ProcessAsync(
 			&scheduler.ScheduleSequenceEvent[string]{
 				Sequence: scheduler.NewSequence(
-					s,
-					true,
-					[]string{"B", "C"},
-					[]*scheduler.Step[string]{
-						scheduler.TimerStep[string](time.Second * 5),
-						scheduler.ActionStep[string](func() error {
-							log.Printf("action 1")
-							return nil
-						}),
+					&scheduler.SequenceArgs[string]{
+						Scheduler:    s,
+						InheritGroup: false,
+						ReleaseGroup: true,
+						GroupSlice:   []string{"B", "C"},
+						StepSlice: []*scheduler.Step[string]{
+							scheduler.TimerStep(&scheduler.TimerStepArgs[string]{Delay: time.Second * 5}),
+							scheduler.ActionStep(&scheduler.ActionStepArgs[string]{Action: func() error {
+								log.Printf("action 1")
+								return nil
+							}}),
+						},
+						StepResultFunc: func(p *scheduler.Step[string], result bool) {
+							if result {
+								log.Printf("group=%s, step<%d/%d>, type=%s, rep<%d/%d>, step completed", p.PrintGroup(), p.StepNum(), p.StepLen(), p.Descriptor(), p.RepNum(), p.RepTotal())
+							} else {
+								log.Printf("group=%s, step<%d/%d>, type=%s, rep<%d/%d>, step interrupted", p.PrintGroup(), p.StepNum(), p.StepLen(), p.Descriptor(), p.RepNum(), p.RepTotal())
+							}
+						},
+						SequenceResultFunc: func(q *scheduler.Sequence[string], result bool) {
+							if result {
+								log.Printf("group=%s, step<%d/%d>, sequence completed", q.PrintGroup(), q.StepNum(), q.StepLen())
+							} else {
+								log.Printf("group=%s, step<%d/%d>, sequence interrupted", q.PrintGroup(), q.StepNum(), q.StepLen())
+							}
+						},
+						LogProgressMode: scheduler.LogProgressModeRep,
 					},
-					func(q *scheduler.Sequence[string], stepIndex uint16, stepResult bool, sequenceResult bool) {
-						if !stepResult {
-							log.Printf("group=%+v, sequence interrupted at stepIndex=%d", q.GroupSlice, stepIndex)
-							return
-						}
-
-						if sequenceResult {
-							log.Printf("group=%+v, sequence completed", q.GroupSlice)
-							return
-						}
-					},
-					scheduler.LogProgressModeRep,
 				),
 			},
 		)
@@ -256,33 +282,39 @@ func test2() {
 		s.ProcessAsync(
 			&scheduler.ScheduleSequenceEvent[string]{
 				Sequence: scheduler.NewSequence(
-					s,
-					true,
-					[]string{"C", "D"},
-					[]*scheduler.Step[string]{
-						scheduler.ActionStep[string](func() error {
-							log.Printf("action 1")
-							return nil
-						}),
-						scheduler.TimerStep[string](time.Second * 2),
-						scheduler.ActionStep[string](func() error {
-							log.Printf("action 2")
-							return nil
-						}),
-						scheduler.TimerStep[string](time.Second * 3),
+					&scheduler.SequenceArgs[string]{
+						Scheduler:    s,
+						InheritGroup: false,
+						ReleaseGroup: true,
+						GroupSlice:   []string{"C", "D"},
+						StepSlice: []*scheduler.Step[string]{
+							scheduler.ActionStep(&scheduler.ActionStepArgs[string]{Action: func() error {
+								log.Printf("action 1")
+								return nil
+							}}),
+							scheduler.TimerStep(&scheduler.TimerStepArgs[string]{Delay: time.Second * 2}),
+							scheduler.ActionStep(&scheduler.ActionStepArgs[string]{Action: func() error {
+								log.Printf("action 2")
+								return nil
+							}}),
+							scheduler.TimerStep(&scheduler.TimerStepArgs[string]{Delay: time.Second * 3}),
+						},
+						StepResultFunc: func(p *scheduler.Step[string], result bool) {
+							if result {
+								log.Printf("group=%s, step<%d/%d>, type=%s, rep<%d/%d>, step completed", p.PrintGroup(), p.StepNum(), p.StepLen(), p.Descriptor(), p.RepNum(), p.RepTotal())
+							} else {
+								log.Printf("group=%s, step<%d/%d>, type=%s, rep<%d/%d>, step interrupted", p.PrintGroup(), p.StepNum(), p.StepLen(), p.Descriptor(), p.RepNum(), p.RepTotal())
+							}
+						},
+						SequenceResultFunc: func(q *scheduler.Sequence[string], result bool) {
+							if result {
+								log.Printf("group=%s, step<%d/%d>, sequence completed", q.PrintGroup(), q.StepNum(), q.StepLen())
+							} else {
+								log.Printf("group=%s, step<%d/%d>, sequence interrupted", q.PrintGroup(), q.StepNum(), q.StepLen())
+							}
+						},
+						LogProgressMode: scheduler.LogProgressModeRep,
 					},
-					func(q *scheduler.Sequence[string], stepIndex uint16, stepResult bool, sequenceResult bool) {
-						if !stepResult {
-							log.Printf("group=%+v, sequence interrupted at stepIndex=%d", q.GroupSlice, stepIndex)
-							return
-						}
-
-						if sequenceResult {
-							log.Printf("group=%+v, sequence completed", q.GroupSlice)
-							return
-						}
-					},
-					scheduler.LogProgressModeRep,
 				),
 			},
 		)
@@ -292,32 +324,38 @@ func test2() {
 		s.ProcessAsync(
 			&scheduler.ScheduleSequenceEvent[string]{
 				Sequence: scheduler.NewSequence(
-					s,
-					false,
-					[]string{"D"},
-					[]*scheduler.Step[string]{
-						scheduler.ActionStep[string](func() error {
-							log.Printf("action 1")
-							return nil
-						}),
-						scheduler.TimerStep[string](time.Second * 8),
-						scheduler.ActionStep[string](func() error {
-							log.Printf("action 2")
-							return nil
-						}),
+					&scheduler.SequenceArgs[string]{
+						Scheduler:    s,
+						InheritGroup: false,
+						ReleaseGroup: false,
+						GroupSlice:   []string{"D"},
+						StepSlice: []*scheduler.Step[string]{
+							scheduler.ActionStep(&scheduler.ActionStepArgs[string]{Action: func() error {
+								log.Printf("action 1")
+								return nil
+							}}),
+							scheduler.TimerStep(&scheduler.TimerStepArgs[string]{Delay: time.Second * 8}),
+							scheduler.ActionStep(&scheduler.ActionStepArgs[string]{Action: func() error {
+								log.Printf("action 2")
+								return nil
+							}}),
+						},
+						StepResultFunc: func(p *scheduler.Step[string], result bool) {
+							if result {
+								log.Printf("group=%s, step<%d/%d>, type=%s, rep<%d/%d>, step completed", p.PrintGroup(), p.StepNum(), p.StepLen(), p.Descriptor(), p.RepNum(), p.RepTotal())
+							} else {
+								log.Printf("group=%s, step<%d/%d>, type=%s, rep<%d/%d>, step interrupted", p.PrintGroup(), p.StepNum(), p.StepLen(), p.Descriptor(), p.RepNum(), p.RepTotal())
+							}
+						},
+						SequenceResultFunc: func(q *scheduler.Sequence[string], result bool) {
+							if result {
+								log.Printf("group=%s, step<%d/%d>, sequence completed", q.PrintGroup(), q.StepNum(), q.StepLen())
+							} else {
+								log.Printf("group=%s, step<%d/%d>, sequence interrupted", q.PrintGroup(), q.StepNum(), q.StepLen())
+							}
+						},
+						LogProgressMode: scheduler.LogProgressModeRep,
 					},
-					func(q *scheduler.Sequence[string], stepIndex uint16, stepResult bool, sequenceResult bool) {
-						if !stepResult {
-							log.Printf("group=%+v, sequence interrupted at stepIndex=%d", q.GroupSlice, stepIndex)
-							return
-						}
-
-						if sequenceResult {
-							log.Printf("group=%+v, sequence completed", q.GroupSlice)
-							return
-						}
-					},
-					scheduler.LogProgressModeRep,
 				),
 			},
 		)
@@ -338,77 +376,116 @@ func test3() {
 		},
 	)
 
-	rf := func(q *scheduler.Sequence[string], stepIndex uint16, stepResult bool, sequenceResult bool) {
-		if !stepResult {
-			log.Printf("group=%+v, sequence interrupted at stepIndex=%d", q.GroupSlice, stepIndex)
-			return
-		}
+	step_rf := func(p *scheduler.Step[string], result bool) {
+		log.Printf(
+			"group=%s, step<%d/%d>, type=%s, rep<%d/%d>, step %s",
+			p.PrintGroup(),
+			p.StepNum(),
+			p.StepLen(),
+			p.Descriptor(),
+			p.RepNum(),
+			p.RepTotal(),
+			func() string {
+				if result {
+					return "completed"
+				} else {
+					return "interrupted"
+				}
+			}(),
+		)
+	}
 
-		if sequenceResult {
-			log.Printf("group=%+v, sequence completed", q.GroupSlice)
-			return
-		}
+	seq_rf := func(q *scheduler.Sequence[string], result bool) {
+		log.Printf(
+			"group=%s, step<%d/%d>, sequence %s",
+			q.PrintGroup(),
+			q.StepNum(),
+			q.StepLen(),
+			func() string {
+				if result {
+					return "completed"
+				} else {
+					return "interrupted"
+				}
+			}(),
+		)
 	}
 
 	go func() {
 		s.ProcessAsync(
 			&scheduler.ScheduleSequenceEvent[string]{
 				Sequence: scheduler.NewSequence(
-					s,
-					true,
-					[]string{"A"},
-					[]*scheduler.Step[string]{
-						scheduler.TimerStep[string](time.Second),
-						scheduler.ActionStep[string](func() error {
-							log.Printf("parent 1")
-							return nil
-						}),
-						scheduler.SequenceStep(
-							1,
-							scheduler.NewSequence(
-								s,
-								false,
-								[]string{"A", "B"},
-								[]*scheduler.Step[string]{
-									scheduler.ActionStep[string](func() error {
-										log.Printf("child 1")
-										return nil
-									}),
-									scheduler.TimerStep[string](time.Millisecond * 500),
+					&scheduler.SequenceArgs[string]{
+						Scheduler:    s,
+						InheritGroup: false,
+						ReleaseGroup: true,
+						GroupSlice:   []string{"A"},
+						StepSlice: []*scheduler.Step[string]{
+							scheduler.TimerStep(&scheduler.TimerStepArgs[string]{Delay: time.Second}),
+							scheduler.ActionStep(&scheduler.ActionStepArgs[string]{Action: func() error {
+								log.Printf("parent 1")
+								return nil
+							}}),
+							scheduler.SequenceStep(
+								&scheduler.SequenceStepArgs[string]{
+									Sequence: scheduler.NewSequence(
+										&scheduler.SequenceArgs[string]{
+											Scheduler:    s,
+											InheritGroup: false,
+											ReleaseGroup: false,
+											GroupSlice:   []string{"A", "B"},
+											StepSlice: []*scheduler.Step[string]{
+												scheduler.ActionStep(&scheduler.ActionStepArgs[string]{Action: func() error {
+													log.Printf("child 1")
+													return nil
+												}}),
+												scheduler.TimerStep(&scheduler.TimerStepArgs[string]{Delay: time.Millisecond * 500}),
+											},
+											StepResultFunc:     step_rf,
+											SequenceResultFunc: seq_rf,
+											LogProgressMode:    scheduler.LogProgressModeRep,
+										},
+									),
+									RepTotal: 1,
 								},
-								rf,
-								scheduler.LogProgressModeRep,
 							),
-						),
-						scheduler.ActionStep[string](func() error {
-							log.Printf("parent 2")
-							return nil
-						}),
-						scheduler.TimerStep[string](time.Second),
-						scheduler.SequenceStep(
-							1,
-							scheduler.NewSequence(
-								s,
-								true,
-								[]string{"A", "C"},
-								[]*scheduler.Step[string]{
-									scheduler.TimerStep[string](time.Millisecond * 500),
-									scheduler.ActionStep[string](func() error {
-										log.Printf("child 2")
-										return nil
-									}),
+							scheduler.ActionStep(&scheduler.ActionStepArgs[string]{Action: func() error {
+								log.Printf("parent 2")
+								return nil
+							}}),
+							scheduler.TimerStep(&scheduler.TimerStepArgs[string]{Delay: time.Second}),
+							scheduler.SequenceStep(
+								&scheduler.SequenceStepArgs[string]{
+									Sequence: scheduler.NewSequence(
+										&scheduler.SequenceArgs[string]{
+											Scheduler:    s,
+											InheritGroup: false,
+											ReleaseGroup: true,
+											GroupSlice:   []string{"A", "C"},
+											StepSlice: []*scheduler.Step[string]{
+												scheduler.TimerStep(&scheduler.TimerStepArgs[string]{Delay: time.Millisecond * 500}),
+												scheduler.ActionStep(&scheduler.ActionStepArgs[string]{Action: func() error {
+													log.Printf("child 2")
+													return nil
+												}}),
+											},
+											StepResultFunc:     step_rf,
+											SequenceResultFunc: seq_rf,
+											LogProgressMode:    scheduler.LogProgressModeRep,
+										},
+									),
+									RepTotal: 1,
 								},
-								rf,
-								scheduler.LogProgressModeRep,
 							),
-						),
-						scheduler.ActionStep[string](func() error {
-							log.Printf("parent 3")
-							return nil
-						}),
+							scheduler.ActionStep(&scheduler.ActionStepArgs[string]{Action: func() error {
+								log.Printf("parent 3")
+								return nil
+							}}),
+						},
+						StepResultFunc:     step_rf,
+						SequenceResultFunc: seq_rf,
+						LogProgressMode:    scheduler.LogProgressModeRep,
 					},
-					rf,
-					scheduler.LogProgressModeRep,
 				),
 			},
 		)
@@ -429,54 +506,93 @@ func test4() {
 		},
 	)
 
-	rf := func(q *scheduler.Sequence[string], stepIndex uint16, stepResult bool, sequenceResult bool) {
-		if !stepResult {
-			log.Printf("group=%+v, sequence interrupted at stepIndex=%d", q.GroupSlice, stepIndex)
-			return
-		}
+	step_rf := func(p *scheduler.Step[string], result bool) {
+		log.Printf(
+			"group=%s, step<%d/%d>, type=%s, rep<%d/%d>, step %s",
+			p.PrintGroup(),
+			p.StepNum(),
+			p.StepLen(),
+			p.Descriptor(),
+			p.RepNum(),
+			p.RepTotal(),
+			func() string {
+				if result {
+					return "completed"
+				} else {
+					return "interrupted"
+				}
+			}(),
+		)
+	}
 
-		if sequenceResult {
-			log.Printf("group=%+v, sequence completed", q.GroupSlice)
-			return
-		}
+	seq_rf := func(q *scheduler.Sequence[string], result bool) {
+		log.Printf(
+			"group=%s, step<%d/%d>, sequence %s",
+			q.PrintGroup(),
+			q.StepNum(),
+			q.StepLen(),
+			func() string {
+				if result {
+					return "completed"
+				} else {
+					return "interrupted"
+				}
+			}(),
+		)
 	}
 
 	go func() {
 		s.ProcessAsync(
 			&scheduler.ScheduleSequenceEvent[string]{
 				Sequence: scheduler.NewSequence(
-					s,
-					true,
-					[]string{"A"},
-					[]*scheduler.Step[string]{
-						scheduler.SequenceStep(
-							1,
-							scheduler.NewSequence(
-								s,
-								false,
-								[]string{"B"},
-								[]*scheduler.Step[string]{
-									scheduler.SequenceStep(
-										1,
-										scheduler.NewSequence(
-											s,
-											true,
-											[]string{"C"},
-											[]*scheduler.Step[string]{
-												scheduler.TimerStep[string](time.Second),
+					&scheduler.SequenceArgs[string]{
+						Scheduler:    s,
+						InheritGroup: false,
+						ReleaseGroup: true,
+						GroupSlice:   []string{"A"},
+						StepSlice: []*scheduler.Step[string]{
+							scheduler.SequenceStep(
+								&scheduler.SequenceStepArgs[string]{
+									Sequence: scheduler.NewSequence(
+										&scheduler.SequenceArgs[string]{
+											Scheduler:    s,
+											InheritGroup: false,
+											ReleaseGroup: false,
+											GroupSlice:   []string{"B"},
+											StepSlice: []*scheduler.Step[string]{
+												scheduler.SequenceStep(
+													&scheduler.SequenceStepArgs[string]{
+														Sequence: scheduler.NewSequence(
+															&scheduler.SequenceArgs[string]{
+																Scheduler:    s,
+																InheritGroup: false,
+																ReleaseGroup: true,
+																GroupSlice:   []string{"C"},
+																StepSlice: []*scheduler.Step[string]{
+																	scheduler.TimerStep(&scheduler.TimerStepArgs[string]{Delay: time.Second}),
+																},
+																StepResultFunc:     step_rf,
+																SequenceResultFunc: seq_rf,
+																LogProgressMode:    scheduler.LogProgressModeRep,
+															},
+														),
+														RepTotal: 1,
+													},
+												),
 											},
-											rf,
-											scheduler.LogProgressModeRep,
-										),
+											StepResultFunc:     step_rf,
+											SequenceResultFunc: seq_rf,
+											LogProgressMode:    scheduler.LogProgressModeRep,
+										},
 									),
+									RepTotal: 1,
 								},
-								rf,
-								scheduler.LogProgressModeRep,
 							),
-						),
+						},
+						StepResultFunc:     step_rf,
+						SequenceResultFunc: seq_rf,
+						LogProgressMode:    scheduler.LogProgressModeRep,
 					},
-					rf,
-					scheduler.LogProgressModeRep,
 				),
 			},
 		)
@@ -486,106 +602,34 @@ func test4() {
 		s.ProcessAsync(
 			&scheduler.ScheduleSequenceEvent[string]{
 				Sequence: scheduler.NewSequence(
-					s,
-					true,
-					[]string{"A"},
-					[]*scheduler.Step[string]{
-						scheduler.SequenceStep(
-							1,
-							scheduler.NewSequence(
-								s,
-								false,
-								[]string{"B"},
-								[]*scheduler.Step[string]{},
-								rf,
-								scheduler.LogProgressModeRep,
-							),
-						),
-					},
-					rf,
-					scheduler.LogProgressModeRep,
-				),
-			},
-		)
-
-		<-time.After(time.Second * 3)
-
-		s.ProcessAsync(
-			&scheduler.ScheduleSequenceEvent[string]{
-				Sequence: scheduler.NewSequence(
-					s,
-					true,
-					[]string{"A"},
-					[]*scheduler.Step[string]{},
-					rf,
-					scheduler.LogProgressModeRep,
-				),
-			},
-		)
-
-		<-time.After(time.Second * 3)
-
-		s.ProcessAsync(
-			&scheduler.ScheduleSequenceEvent[string]{
-				Sequence: scheduler.NewSequence(
-					s,
-					true,
-					[]string{"A"},
-					[]*scheduler.Step[string]{
-						scheduler.ActionStep[string](func() error {
-							err := fmt.Errorf("parent action step fail")
-							log.Printf("%s", err.Error())
-							return err
-						}),
-						scheduler.ActionStep[string](func() error {
-							log.Printf("cannot reach")
-							return nil
-						}),
-					},
-					rf,
-					scheduler.LogProgressModeRep,
-				),
-			},
-		)
-
-		<-time.After(time.Second * 3)
-
-		s.ProcessAsync(
-			&scheduler.ScheduleSequenceEvent[string]{
-				Sequence: scheduler.NewSequence(
-					s,
-					true,
-					[]string{"A"},
-					[]*scheduler.Step[string]{
-						scheduler.SequenceStep(
-							1,
-							scheduler.NewSequence(
-								s,
-								false,
-								[]string{"B"},
-								[]*scheduler.Step[string]{
-									//scheduler.TimerStep[string](0),
-									scheduler.ActionStep[string](func() error {
-										err := fmt.Errorf("child action step fail")
-										log.Printf("%s", err.Error())
-										return err
-									}),
-									scheduler.ActionStep[string](func() error {
-										log.Printf("cannot reach")
-										return nil
-									}),
+					&scheduler.SequenceArgs[string]{
+						Scheduler:    s,
+						InheritGroup: false,
+						ReleaseGroup: true,
+						GroupSlice:   []string{"A"},
+						StepSlice: []*scheduler.Step[string]{
+							scheduler.SequenceStep(
+								&scheduler.SequenceStepArgs[string]{
+									Sequence: scheduler.NewSequence(
+										&scheduler.SequenceArgs[string]{
+											Scheduler:          s,
+											InheritGroup:       false,
+											ReleaseGroup:       false,
+											GroupSlice:         []string{"B"},
+											StepSlice:          []*scheduler.Step[string]{},
+											StepResultFunc:     step_rf,
+											SequenceResultFunc: seq_rf,
+											LogProgressMode:    scheduler.LogProgressModeRep,
+										},
+									),
+									RepTotal: 1,
 								},
-								nil,
-								scheduler.LogProgressModeRep,
 							),
-						),
-						scheduler.ActionStep[string](func() error {
-							log.Printf("cannot reach")
-							return nil
-						}),
+						},
+						StepResultFunc:     step_rf,
+						SequenceResultFunc: seq_rf,
+						LogProgressMode:    scheduler.LogProgressModeRep,
 					},
-					rf,
-					scheduler.LogProgressModeRep,
 				),
 			},
 		)
@@ -595,49 +639,165 @@ func test4() {
 		s.ProcessAsync(
 			&scheduler.ScheduleSequenceEvent[string]{
 				Sequence: scheduler.NewSequence(
-					s,
-					true,
-					[]string{"A"},
-					[]*scheduler.Step[string]{
-						scheduler.SequenceStep(
-							1,
-							scheduler.NewSequence(
-								s,
-								false,
-								[]string{"B"},
-								[]*scheduler.Step[string]{
-									scheduler.SequenceStep(
-										1,
-										scheduler.NewSequence(
-											s,
-											true,
-											[]string{"C"},
-											[]*scheduler.Step[string]{
-												scheduler.ActionStep[string](func() error {
-													log.Printf("child action step panic")
+					&scheduler.SequenceArgs[string]{
+						Scheduler:          s,
+						InheritGroup:       false,
+						ReleaseGroup:       true,
+						GroupSlice:         []string{"A"},
+						StepSlice:          []*scheduler.Step[string]{},
+						StepResultFunc:     step_rf,
+						SequenceResultFunc: seq_rf,
+						LogProgressMode:    scheduler.LogProgressModeRep,
+					},
+				),
+			},
+		)
 
-													var err error
+		<-time.After(time.Second * 3)
+
+		s.ProcessAsync(
+			&scheduler.ScheduleSequenceEvent[string]{
+				Sequence: scheduler.NewSequence(
+					&scheduler.SequenceArgs[string]{
+						Scheduler:    s,
+						InheritGroup: false,
+						ReleaseGroup: true,
+						GroupSlice:   []string{"A"},
+						StepSlice: []*scheduler.Step[string]{
+							scheduler.ActionStep(&scheduler.ActionStepArgs[string]{Action: func() error {
+								err := fmt.Errorf("parent action step fail")
+								log.Printf("%s", err.Error())
+								return err
+							}}),
+							scheduler.ActionStep(&scheduler.ActionStepArgs[string]{Action: func() error {
+								log.Printf("cannot reach")
+								return nil
+							}}),
+						},
+						StepResultFunc:     step_rf,
+						SequenceResultFunc: seq_rf,
+						LogProgressMode:    scheduler.LogProgressModeRep,
+					},
+				),
+			},
+		)
+
+		<-time.After(time.Second * 3)
+
+		s.ProcessAsync(
+			&scheduler.ScheduleSequenceEvent[string]{
+				Sequence: scheduler.NewSequence(
+					&scheduler.SequenceArgs[string]{
+						Scheduler:    s,
+						InheritGroup: false,
+						ReleaseGroup: true,
+						GroupSlice:   []string{"A"},
+						StepSlice: []*scheduler.Step[string]{
+							scheduler.SequenceStep(
+								&scheduler.SequenceStepArgs[string]{
+									Sequence: scheduler.NewSequence(
+										&scheduler.SequenceArgs[string]{
+											Scheduler:    s,
+											InheritGroup: false,
+											ReleaseGroup: false,
+											GroupSlice:   []string{"B"},
+											StepSlice: []*scheduler.Step[string]{
+												scheduler.TimerStep(&scheduler.TimerStepArgs[string]{Delay: 0}),
+												scheduler.ActionStep(&scheduler.ActionStepArgs[string]{Action: func() error {
+													err := fmt.Errorf("child action step fail")
 													log.Printf("%s", err.Error())
-
-													return nil
-												}),
-												scheduler.ActionStep[string](func() error {
+													return err
+												}}),
+												scheduler.ActionStep(&scheduler.ActionStepArgs[string]{Action: func() error {
 													log.Printf("cannot reach")
 													return nil
-												}),
+												}}),
 											},
-											rf,
-											scheduler.LogProgressModeRep,
-										),
+											StepResultFunc:     step_rf,
+											SequenceResultFunc: seq_rf,
+											LogProgressMode:    scheduler.LogProgressModeRep,
+										},
 									),
+									RepTotal: 1,
 								},
-								rf,
-								scheduler.LogProgressModeRep,
 							),
-						),
+							scheduler.ActionStep(&scheduler.ActionStepArgs[string]{Action: func() error {
+								log.Printf("cannot reach")
+								return nil
+							}}),
+						},
+						StepResultFunc:     step_rf,
+						SequenceResultFunc: seq_rf,
+						LogProgressMode:    scheduler.LogProgressModeRep,
 					},
-					rf,
-					scheduler.LogProgressModeRep,
+				),
+			},
+		)
+
+		<-time.After(time.Second * 3)
+
+		s.ProcessAsync(
+			&scheduler.ScheduleSequenceEvent[string]{
+				Sequence: scheduler.NewSequence(
+					&scheduler.SequenceArgs[string]{
+						Scheduler:    s,
+						InheritGroup: false,
+						ReleaseGroup: true,
+						GroupSlice:   []string{"A"},
+						StepSlice: []*scheduler.Step[string]{
+							scheduler.SequenceStep(
+								&scheduler.SequenceStepArgs[string]{
+									Sequence: scheduler.NewSequence(
+										&scheduler.SequenceArgs[string]{
+											Scheduler:    s,
+											InheritGroup: false,
+											ReleaseGroup: false,
+											GroupSlice:   []string{"B"},
+											StepSlice: []*scheduler.Step[string]{
+												scheduler.SequenceStep(
+													&scheduler.SequenceStepArgs[string]{
+														Sequence: scheduler.NewSequence(
+															&scheduler.SequenceArgs[string]{
+																Scheduler:    s,
+																InheritGroup: false,
+																ReleaseGroup: true,
+																GroupSlice:   []string{"C"},
+																StepSlice: []*scheduler.Step[string]{
+																	scheduler.ActionStep(&scheduler.ActionStepArgs[string]{Action: func() error {
+																		log.Printf("child action step panic")
+
+																		var err error
+																		log.Printf("%s", err.Error())
+
+																		return nil
+																	}}),
+																	scheduler.ActionStep(&scheduler.ActionStepArgs[string]{Action: func() error {
+																		log.Printf("cannot reach")
+																		return nil
+																	}}),
+																},
+																StepResultFunc:     step_rf,
+																SequenceResultFunc: seq_rf,
+																LogProgressMode:    scheduler.LogProgressModeRep,
+															},
+														),
+														RepTotal: 1,
+													},
+												),
+											},
+											StepResultFunc:     step_rf,
+											SequenceResultFunc: seq_rf,
+											LogProgressMode:    scheduler.LogProgressModeRep,
+										},
+									),
+									RepTotal: 1,
+								},
+							),
+						},
+						StepResultFunc:     step_rf,
+						SequenceResultFunc: seq_rf,
+						LogProgressMode:    scheduler.LogProgressModeRep,
+					},
 				),
 			},
 		)
@@ -658,57 +818,96 @@ func test5() {
 		},
 	)
 
-	rf := func(q *scheduler.Sequence[string], stepIndex uint16, stepResult bool, sequenceResult bool) {
-		if !stepResult {
-			log.Printf("group=%+v, sequence interrupted at stepIndex=%d", q.GroupSlice, stepIndex)
-			return
-		}
+	step_rf := func(p *scheduler.Step[string], result bool) {
+		log.Printf(
+			"group=%s, step<%d/%d>, type=%s, rep<%d/%d>, step %s",
+			p.PrintGroup(),
+			p.StepNum(),
+			p.StepLen(),
+			p.Descriptor(),
+			p.RepNum(),
+			p.RepTotal(),
+			func() string {
+				if result {
+					return "completed"
+				} else {
+					return "interrupted"
+				}
+			}(),
+		)
+	}
 
-		if sequenceResult {
-			log.Printf("group=%+v, sequence completed", q.GroupSlice)
-			return
-		}
+	seq_rf := func(q *scheduler.Sequence[string], result bool) {
+		log.Printf(
+			"group=%s, step<%d/%d>, sequence %s",
+			q.PrintGroup(),
+			q.StepNum(),
+			q.StepLen(),
+			func() string {
+				if result {
+					return "completed"
+				} else {
+					return "interrupted"
+				}
+			}(),
+		)
 	}
 
 	go func() {
 		s.ProcessAsync(
 			&scheduler.ScheduleSequenceEvent[string]{
 				Sequence: scheduler.NewSequence(
-					s,
-					true,
-					[]string{"A1"},
-					[]*scheduler.Step[string]{
-						scheduler.SequenceStep(
-							2,
-							scheduler.NewSequence(
-								s,
-								false,
-								[]string{"A2"},
-								[]*scheduler.Step[string]{
-									scheduler.SequenceStep(
-										2,
-										scheduler.NewSequence(
-											s,
-											true,
-											[]string{"A3"},
-											[]*scheduler.Step[string]{
-												scheduler.ActionStep[string](func() error {
-													log.Printf("action A3")
-													return nil
-												}),
+					&scheduler.SequenceArgs[string]{
+						Scheduler:    s,
+						InheritGroup: false,
+						ReleaseGroup: true,
+						GroupSlice:   []string{"A1"},
+						StepSlice: []*scheduler.Step[string]{
+							scheduler.SequenceStep(
+								&scheduler.SequenceStepArgs[string]{
+									Sequence: scheduler.NewSequence(
+										&scheduler.SequenceArgs[string]{
+											Scheduler:    s,
+											InheritGroup: false,
+											ReleaseGroup: false,
+											GroupSlice:   []string{"A2"},
+											StepSlice: []*scheduler.Step[string]{
+												scheduler.SequenceStep(
+													&scheduler.SequenceStepArgs[string]{
+														Sequence: scheduler.NewSequence(
+															&scheduler.SequenceArgs[string]{
+																Scheduler:    s,
+																InheritGroup: false,
+																ReleaseGroup: true,
+																GroupSlice:   []string{"A3"},
+																StepSlice: []*scheduler.Step[string]{
+																	scheduler.ActionStep(&scheduler.ActionStepArgs[string]{Action: func() error {
+																		log.Printf("action A3")
+																		return nil
+																	}}),
+																},
+																StepResultFunc:     step_rf,
+																SequenceResultFunc: seq_rf,
+																LogProgressMode:    scheduler.LogProgressModeRep,
+															},
+														),
+														RepTotal: 2,
+													},
+												),
 											},
-											rf,
-											scheduler.LogProgressModeRep,
-										),
+											StepResultFunc:     step_rf,
+											SequenceResultFunc: seq_rf,
+											LogProgressMode:    scheduler.LogProgressModeRep,
+										},
 									),
+									RepTotal: 2,
 								},
-								rf,
-								scheduler.LogProgressModeRep,
 							),
-						),
+						},
+						StepResultFunc:     step_rf,
+						SequenceResultFunc: seq_rf,
+						LogProgressMode:    scheduler.LogProgressModeRep,
 					},
-					rf,
-					scheduler.LogProgressModeRep,
 				),
 			},
 		)
@@ -718,38 +917,54 @@ func test5() {
 		s.ProcessAsync(
 			&scheduler.ScheduleSequenceEvent[string]{
 				Sequence: scheduler.NewSequence(
-					s,
-					true,
-					[]string{"B1"},
-					[]*scheduler.Step[string]{
-						scheduler.SequenceStep(
-							2,
-							scheduler.NewSequence(
-								s,
-								false,
-								[]string{"B2"},
-								[]*scheduler.Step[string]{
-									scheduler.SequenceStep(
-										2,
-										scheduler.NewSequence(
-											s,
-											true,
-											[]string{"B3"},
-											[]*scheduler.Step[string]{
-												scheduler.TimerStep[string](time.Second),
+					&scheduler.SequenceArgs[string]{
+						Scheduler:    s,
+						InheritGroup: false,
+						ReleaseGroup: true,
+						GroupSlice:   []string{"B1"},
+						StepSlice: []*scheduler.Step[string]{
+							scheduler.SequenceStep(
+								&scheduler.SequenceStepArgs[string]{
+									Sequence: scheduler.NewSequence(
+										&scheduler.SequenceArgs[string]{
+											Scheduler:    s,
+											InheritGroup: false,
+											ReleaseGroup: false,
+											GroupSlice:   []string{"B2"},
+											StepSlice: []*scheduler.Step[string]{
+												scheduler.SequenceStep(
+													&scheduler.SequenceStepArgs[string]{
+														Sequence: scheduler.NewSequence(
+															&scheduler.SequenceArgs[string]{
+																Scheduler:    s,
+																InheritGroup: false,
+																ReleaseGroup: true,
+																GroupSlice:   []string{"B3"},
+																StepSlice: []*scheduler.Step[string]{
+																	scheduler.TimerStep(&scheduler.TimerStepArgs[string]{Delay: time.Second}),
+																},
+																StepResultFunc:     step_rf,
+																SequenceResultFunc: seq_rf,
+																LogProgressMode:    scheduler.LogProgressModeRep,
+															},
+														),
+														RepTotal: 2,
+													},
+												),
 											},
-											rf,
-											scheduler.LogProgressModeRep,
-										),
+											StepResultFunc:     step_rf,
+											SequenceResultFunc: seq_rf,
+											LogProgressMode:    scheduler.LogProgressModeRep,
+										},
 									),
+									RepTotal: 2,
 								},
-								rf,
-								scheduler.LogProgressModeRep,
 							),
-						),
+						},
+						StepResultFunc:     step_rf,
+						SequenceResultFunc: seq_rf,
+						LogProgressMode:    scheduler.LogProgressModeRep,
 					},
-					rf,
-					scheduler.LogProgressModeRep,
 				),
 			},
 		)
@@ -759,46 +974,62 @@ func test5() {
 		s.ProcessAsync(
 			&scheduler.ScheduleSequenceEvent[string]{
 				Sequence: scheduler.NewSequence(
-					s,
-					true,
-					[]string{"C1"},
-					[]*scheduler.Step[string]{
-						scheduler.SequenceStep(
-							2,
-							scheduler.NewSequence(
-								s,
-								false,
-								[]string{"C2"},
-								[]*scheduler.Step[string]{
-									scheduler.ActionStep[string](func() error {
-										log.Printf("action C2")
-										return nil
-									}),
-									scheduler.SequenceStep(
-										2,
-										scheduler.NewSequence(
-											s,
-											true,
-											[]string{"C3"},
-											[]*scheduler.Step[string]{
-												scheduler.ActionStep[string](func() error {
-													log.Printf("action C3")
+					&scheduler.SequenceArgs[string]{
+						Scheduler:    s,
+						InheritGroup: false,
+						ReleaseGroup: true,
+						GroupSlice:   []string{"C1"},
+						StepSlice: []*scheduler.Step[string]{
+							scheduler.SequenceStep(
+								&scheduler.SequenceStepArgs[string]{
+									Sequence: scheduler.NewSequence(
+										&scheduler.SequenceArgs[string]{
+											Scheduler:    s,
+											InheritGroup: false,
+											ReleaseGroup: false,
+											GroupSlice:   []string{"C2"},
+											StepSlice: []*scheduler.Step[string]{
+												scheduler.ActionStep(&scheduler.ActionStepArgs[string]{Action: func() error {
+													log.Printf("action C2")
 													return nil
-												}),
-												scheduler.TimerStep[string](time.Second),
+												}}),
+												scheduler.SequenceStep(
+													&scheduler.SequenceStepArgs[string]{
+														Sequence: scheduler.NewSequence(
+															&scheduler.SequenceArgs[string]{
+																Scheduler:    s,
+																InheritGroup: false,
+																ReleaseGroup: true,
+																GroupSlice:   []string{"C3"},
+																StepSlice: []*scheduler.Step[string]{
+																	scheduler.ActionStep(&scheduler.ActionStepArgs[string]{Action: func() error {
+																		log.Printf("action C3")
+																		return nil
+																	}}),
+																	scheduler.TimerStep(&scheduler.TimerStepArgs[string]{Delay: time.Second}),
+																},
+																StepResultFunc:     step_rf,
+																SequenceResultFunc: seq_rf,
+																LogProgressMode:    scheduler.LogProgressModeRep,
+															},
+														),
+														RepTotal: 2,
+													},
+												),
 											},
-											rf,
-											scheduler.LogProgressModeRep,
-										),
+											StepResultFunc:     step_rf,
+											SequenceResultFunc: seq_rf,
+											LogProgressMode:    scheduler.LogProgressModeRep,
+										},
 									),
+									RepTotal: 2,
 								},
-								rf,
-								scheduler.LogProgressModeRep,
 							),
-						),
+						},
+						StepResultFunc:     step_rf,
+						SequenceResultFunc: seq_rf,
+						LogProgressMode:    scheduler.LogProgressModeRep,
 					},
-					rf,
-					scheduler.LogProgressModeRep,
 				),
 			},
 		)
@@ -808,46 +1039,62 @@ func test5() {
 		s.ProcessAsync(
 			&scheduler.ScheduleSequenceEvent[string]{
 				Sequence: scheduler.NewSequence(
-					s,
-					true,
-					[]string{"D1"},
-					[]*scheduler.Step[string]{
-						scheduler.SequenceStep(
-							2,
-							scheduler.NewSequence(
-								s,
-								false,
-								[]string{"D2"},
-								[]*scheduler.Step[string]{
-									scheduler.ActionStep[string](func() error {
-										log.Printf("action D2")
-										return nil
-									}),
-									scheduler.SequenceStep(
-										2,
-										scheduler.NewSequence(
-											s,
-											true,
-											[]string{"D3"},
-											[]*scheduler.Step[string]{
-												scheduler.TimerStep[string](time.Second),
-												scheduler.ActionStep[string](func() error {
-													log.Printf("action D3")
+					&scheduler.SequenceArgs[string]{
+						Scheduler:    s,
+						InheritGroup: false,
+						ReleaseGroup: true,
+						GroupSlice:   []string{"D1"},
+						StepSlice: []*scheduler.Step[string]{
+							scheduler.SequenceStep(
+								&scheduler.SequenceStepArgs[string]{
+									Sequence: scheduler.NewSequence(
+										&scheduler.SequenceArgs[string]{
+											Scheduler:    s,
+											InheritGroup: false,
+											ReleaseGroup: false,
+											GroupSlice:   []string{"D2"},
+											StepSlice: []*scheduler.Step[string]{
+												scheduler.ActionStep(&scheduler.ActionStepArgs[string]{Action: func() error {
+													log.Printf("action D2")
 													return nil
-												}),
+												}}),
+												scheduler.SequenceStep(
+													&scheduler.SequenceStepArgs[string]{
+														Sequence: scheduler.NewSequence(
+															&scheduler.SequenceArgs[string]{
+																Scheduler:    s,
+																InheritGroup: false,
+																ReleaseGroup: true,
+																GroupSlice:   []string{"D3"},
+																StepSlice: []*scheduler.Step[string]{
+																	scheduler.TimerStep(&scheduler.TimerStepArgs[string]{Delay: time.Second}),
+																	scheduler.ActionStep(&scheduler.ActionStepArgs[string]{Action: func() error {
+																		log.Printf("action D3")
+																		return nil
+																	}}),
+																},
+																StepResultFunc:     step_rf,
+																SequenceResultFunc: seq_rf,
+																LogProgressMode:    scheduler.LogProgressModeRep,
+															},
+														),
+														RepTotal: 2,
+													},
+												),
 											},
-											rf,
-											scheduler.LogProgressModeRep,
-										),
+											StepResultFunc:     step_rf,
+											SequenceResultFunc: seq_rf,
+											LogProgressMode:    scheduler.LogProgressModeRep,
+										},
 									),
+									RepTotal: 2,
 								},
-								rf,
-								scheduler.LogProgressModeRep,
 							),
-						),
+						},
+						StepResultFunc:     step_rf,
+						SequenceResultFunc: seq_rf,
+						LogProgressMode:    scheduler.LogProgressModeRep,
 					},
-					rf,
-					scheduler.LogProgressModeRep,
 				),
 			},
 		)
@@ -857,43 +1104,59 @@ func test5() {
 		s.ProcessAsync(
 			&scheduler.ScheduleSequenceEvent[string]{
 				Sequence: scheduler.NewSequence(
-					s,
-					true,
-					[]string{"E1"},
-					[]*scheduler.Step[string]{
-						scheduler.SequenceStep(
-							2,
-							scheduler.NewSequence(
-								s,
-								false,
-								[]string{"E2"},
-								[]*scheduler.Step[string]{
-									scheduler.TimerStep[string](time.Second),
-									scheduler.SequenceStep(
-										2,
-										scheduler.NewSequence(
-											s,
-											true,
-											[]string{"E3"},
-											[]*scheduler.Step[string]{
-												scheduler.ActionStep[string](func() error {
-													log.Printf("action E3")
-													return nil
-												}),
-												scheduler.TimerStep[string](time.Second),
+					&scheduler.SequenceArgs[string]{
+						Scheduler:    s,
+						InheritGroup: false,
+						ReleaseGroup: true,
+						GroupSlice:   []string{"E1"},
+						StepSlice: []*scheduler.Step[string]{
+							scheduler.SequenceStep(
+								&scheduler.SequenceStepArgs[string]{
+									Sequence: scheduler.NewSequence(
+										&scheduler.SequenceArgs[string]{
+											Scheduler:    s,
+											InheritGroup: false,
+											ReleaseGroup: false,
+											GroupSlice:   []string{"E2"},
+											StepSlice: []*scheduler.Step[string]{
+												scheduler.TimerStep(&scheduler.TimerStepArgs[string]{Delay: time.Second}),
+												scheduler.SequenceStep(
+													&scheduler.SequenceStepArgs[string]{
+														Sequence: scheduler.NewSequence(
+															&scheduler.SequenceArgs[string]{
+																Scheduler:    s,
+																InheritGroup: false,
+																ReleaseGroup: true,
+																GroupSlice:   []string{"E3"},
+																StepSlice: []*scheduler.Step[string]{
+																	scheduler.ActionStep(&scheduler.ActionStepArgs[string]{Action: func() error {
+																		log.Printf("action E3")
+																		return nil
+																	}}),
+																	scheduler.TimerStep(&scheduler.TimerStepArgs[string]{Delay: time.Second}),
+																},
+																StepResultFunc:     step_rf,
+																SequenceResultFunc: seq_rf,
+																LogProgressMode:    scheduler.LogProgressModeRep,
+															},
+														),
+														RepTotal: 2,
+													},
+												),
 											},
-											rf,
-											scheduler.LogProgressModeRep,
-										),
+											StepResultFunc:     step_rf,
+											SequenceResultFunc: seq_rf,
+											LogProgressMode:    scheduler.LogProgressModeRep,
+										},
 									),
+									RepTotal: 2,
 								},
-								rf,
-								scheduler.LogProgressModeRep,
 							),
-						),
+						},
+						StepResultFunc:     step_rf,
+						SequenceResultFunc: seq_rf,
+						LogProgressMode:    scheduler.LogProgressModeRep,
 					},
-					rf,
-					scheduler.LogProgressModeRep,
 				),
 			},
 		)
@@ -903,43 +1166,59 @@ func test5() {
 		s.ProcessAsync(
 			&scheduler.ScheduleSequenceEvent[string]{
 				Sequence: scheduler.NewSequence(
-					s,
-					true,
-					[]string{"F1"},
-					[]*scheduler.Step[string]{
-						scheduler.SequenceStep(
-							2,
-							scheduler.NewSequence(
-								s,
-								false,
-								[]string{"F2"},
-								[]*scheduler.Step[string]{
-									scheduler.TimerStep[string](time.Second),
-									scheduler.SequenceStep(
-										2,
-										scheduler.NewSequence(
-											s,
-											true,
-											[]string{"F3"},
-											[]*scheduler.Step[string]{
-												scheduler.TimerStep[string](time.Second),
-												scheduler.ActionStep[string](func() error {
-													log.Printf("action F3")
-													return nil
-												}),
+					&scheduler.SequenceArgs[string]{
+						Scheduler:    s,
+						InheritGroup: false,
+						ReleaseGroup: true,
+						GroupSlice:   []string{"F1"},
+						StepSlice: []*scheduler.Step[string]{
+							scheduler.SequenceStep(
+								&scheduler.SequenceStepArgs[string]{
+									Sequence: scheduler.NewSequence(
+										&scheduler.SequenceArgs[string]{
+											Scheduler:    s,
+											InheritGroup: false,
+											ReleaseGroup: false,
+											GroupSlice:   []string{"F2"},
+											StepSlice: []*scheduler.Step[string]{
+												scheduler.TimerStep(&scheduler.TimerStepArgs[string]{Delay: time.Second}),
+												scheduler.SequenceStep(
+													&scheduler.SequenceStepArgs[string]{
+														Sequence: scheduler.NewSequence(
+															&scheduler.SequenceArgs[string]{
+																Scheduler:    s,
+																InheritGroup: false,
+																ReleaseGroup: true,
+																GroupSlice:   []string{"F3"},
+																StepSlice: []*scheduler.Step[string]{
+																	scheduler.TimerStep(&scheduler.TimerStepArgs[string]{Delay: time.Second}),
+																	scheduler.ActionStep(&scheduler.ActionStepArgs[string]{Action: func() error {
+																		log.Printf("action F3")
+																		return nil
+																	}}),
+																},
+																StepResultFunc:     step_rf,
+																SequenceResultFunc: seq_rf,
+																LogProgressMode:    scheduler.LogProgressModeRep,
+															},
+														),
+														RepTotal: 2,
+													},
+												),
 											},
-											rf,
-											scheduler.LogProgressModeRep,
-										),
+											StepResultFunc:     step_rf,
+											SequenceResultFunc: seq_rf,
+											LogProgressMode:    scheduler.LogProgressModeRep,
+										},
 									),
+									RepTotal: 2,
 								},
-								rf,
-								scheduler.LogProgressModeRep,
 							),
-						),
+						},
+						StepResultFunc:     step_rf,
+						SequenceResultFunc: seq_rf,
+						LogProgressMode:    scheduler.LogProgressModeRep,
 					},
-					rf,
-					scheduler.LogProgressModeRep,
 				),
 			},
 		)
@@ -949,46 +1228,62 @@ func test5() {
 		s.ProcessAsync(
 			&scheduler.ScheduleSequenceEvent[string]{
 				Sequence: scheduler.NewSequence(
-					s,
-					true,
-					[]string{"G1"},
-					[]*scheduler.Step[string]{
-						scheduler.SequenceStep(
-							2,
-							scheduler.NewSequence(
-								s,
-								false,
-								[]string{"G2"},
-								[]*scheduler.Step[string]{
-									scheduler.SequenceStep(
-										2,
-										scheduler.NewSequence(
-											s,
-											true,
-											[]string{"G3"},
-											[]*scheduler.Step[string]{
-												scheduler.ActionStep[string](func() error {
-													log.Printf("action G3")
+					&scheduler.SequenceArgs[string]{
+						Scheduler:    s,
+						InheritGroup: false,
+						ReleaseGroup: true,
+						GroupSlice:   []string{"G1"},
+						StepSlice: []*scheduler.Step[string]{
+							scheduler.SequenceStep(
+								&scheduler.SequenceStepArgs[string]{
+									Sequence: scheduler.NewSequence(
+										&scheduler.SequenceArgs[string]{
+											Scheduler:    s,
+											InheritGroup: false,
+											ReleaseGroup: false,
+											GroupSlice:   []string{"G2"},
+											StepSlice: []*scheduler.Step[string]{
+												scheduler.SequenceStep(
+													&scheduler.SequenceStepArgs[string]{
+														Sequence: scheduler.NewSequence(
+															&scheduler.SequenceArgs[string]{
+																Scheduler:    s,
+																InheritGroup: false,
+																ReleaseGroup: true,
+																GroupSlice:   []string{"G3"},
+																StepSlice: []*scheduler.Step[string]{
+																	scheduler.ActionStep(&scheduler.ActionStepArgs[string]{Action: func() error {
+																		log.Printf("action G3")
+																		return nil
+																	}}),
+																	scheduler.TimerStep(&scheduler.TimerStepArgs[string]{Delay: time.Second}),
+																},
+																StepResultFunc:     step_rf,
+																SequenceResultFunc: seq_rf,
+																LogProgressMode:    scheduler.LogProgressModeRep,
+															},
+														),
+														RepTotal: 2,
+													},
+												),
+												scheduler.ActionStep(&scheduler.ActionStepArgs[string]{Action: func() error {
+													log.Printf("action G2")
 													return nil
-												}),
-												scheduler.TimerStep[string](time.Second),
+												}}),
 											},
-											rf,
-											scheduler.LogProgressModeRep,
-										),
+											StepResultFunc:     step_rf,
+											SequenceResultFunc: seq_rf,
+											LogProgressMode:    scheduler.LogProgressModeRep,
+										},
 									),
-									scheduler.ActionStep[string](func() error {
-										log.Printf("action G2")
-										return nil
-									}),
+									RepTotal: 2,
 								},
-								rf,
-								scheduler.LogProgressModeRep,
 							),
-						),
+						},
+						StepResultFunc:     step_rf,
+						SequenceResultFunc: seq_rf,
+						LogProgressMode:    scheduler.LogProgressModeRep,
 					},
-					rf,
-					scheduler.LogProgressModeRep,
 				),
 			},
 		)
@@ -998,46 +1293,62 @@ func test5() {
 		s.ProcessAsync(
 			&scheduler.ScheduleSequenceEvent[string]{
 				Sequence: scheduler.NewSequence(
-					s,
-					true,
-					[]string{"H1"},
-					[]*scheduler.Step[string]{
-						scheduler.SequenceStep(
-							2,
-							scheduler.NewSequence(
-								s,
-								false,
-								[]string{"H2"},
-								[]*scheduler.Step[string]{
-									scheduler.SequenceStep(
-										2,
-										scheduler.NewSequence(
-											s,
-											true,
-											[]string{"H3"},
-											[]*scheduler.Step[string]{
-												scheduler.TimerStep[string](time.Second),
-												scheduler.ActionStep[string](func() error {
-													log.Printf("action H3")
+					&scheduler.SequenceArgs[string]{
+						Scheduler:    s,
+						InheritGroup: false,
+						ReleaseGroup: true,
+						GroupSlice:   []string{"H1"},
+						StepSlice: []*scheduler.Step[string]{
+							scheduler.SequenceStep(
+								&scheduler.SequenceStepArgs[string]{
+									Sequence: scheduler.NewSequence(
+										&scheduler.SequenceArgs[string]{
+											Scheduler:    s,
+											InheritGroup: false,
+											ReleaseGroup: false,
+											GroupSlice:   []string{"H2"},
+											StepSlice: []*scheduler.Step[string]{
+												scheduler.SequenceStep(
+													&scheduler.SequenceStepArgs[string]{
+														Sequence: scheduler.NewSequence(
+															&scheduler.SequenceArgs[string]{
+																Scheduler:    s,
+																InheritGroup: false,
+																ReleaseGroup: true,
+																GroupSlice:   []string{"H3"},
+																StepSlice: []*scheduler.Step[string]{
+																	scheduler.TimerStep(&scheduler.TimerStepArgs[string]{Delay: time.Second}),
+																	scheduler.ActionStep(&scheduler.ActionStepArgs[string]{Action: func() error {
+																		log.Printf("action H3")
+																		return nil
+																	}}),
+																},
+																StepResultFunc:     step_rf,
+																SequenceResultFunc: seq_rf,
+																LogProgressMode:    scheduler.LogProgressModeRep,
+															},
+														),
+														RepTotal: 2,
+													},
+												),
+												scheduler.ActionStep(&scheduler.ActionStepArgs[string]{Action: func() error {
+													log.Printf("action H2")
 													return nil
-												}),
+												}}),
 											},
-											rf,
-											scheduler.LogProgressModeRep,
-										),
+											StepResultFunc:     step_rf,
+											SequenceResultFunc: seq_rf,
+											LogProgressMode:    scheduler.LogProgressModeRep,
+										},
 									),
-									scheduler.ActionStep[string](func() error {
-										log.Printf("action H2")
-										return nil
-									}),
+									RepTotal: 2,
 								},
-								rf,
-								scheduler.LogProgressModeRep,
 							),
-						),
+						},
+						StepResultFunc:     step_rf,
+						SequenceResultFunc: seq_rf,
+						LogProgressMode:    scheduler.LogProgressModeRep,
 					},
-					rf,
-					scheduler.LogProgressModeRep,
 				),
 			},
 		)
@@ -1047,43 +1358,59 @@ func test5() {
 		s.ProcessAsync(
 			&scheduler.ScheduleSequenceEvent[string]{
 				Sequence: scheduler.NewSequence(
-					s,
-					true,
-					[]string{"I1"},
-					[]*scheduler.Step[string]{
-						scheduler.SequenceStep(
-							2,
-							scheduler.NewSequence(
-								s,
-								false,
-								[]string{"I2"},
-								[]*scheduler.Step[string]{
-									scheduler.SequenceStep(
-										2,
-										scheduler.NewSequence(
-											s,
-											true,
-											[]string{"I3"},
-											[]*scheduler.Step[string]{
-												scheduler.ActionStep[string](func() error {
-													log.Printf("action I3")
-													return nil
-												}),
-												scheduler.TimerStep[string](time.Second),
+					&scheduler.SequenceArgs[string]{
+						Scheduler:    s,
+						InheritGroup: false,
+						ReleaseGroup: true,
+						GroupSlice:   []string{"I1"},
+						StepSlice: []*scheduler.Step[string]{
+							scheduler.SequenceStep(
+								&scheduler.SequenceStepArgs[string]{
+									Sequence: scheduler.NewSequence(
+										&scheduler.SequenceArgs[string]{
+											Scheduler:    s,
+											InheritGroup: false,
+											ReleaseGroup: false,
+											GroupSlice:   []string{"I2"},
+											StepSlice: []*scheduler.Step[string]{
+												scheduler.SequenceStep(
+													&scheduler.SequenceStepArgs[string]{
+														Sequence: scheduler.NewSequence(
+															&scheduler.SequenceArgs[string]{
+																Scheduler:    s,
+																InheritGroup: false,
+																ReleaseGroup: true,
+																GroupSlice:   []string{"I3"},
+																StepSlice: []*scheduler.Step[string]{
+																	scheduler.ActionStep(&scheduler.ActionStepArgs[string]{Action: func() error {
+																		log.Printf("action I3")
+																		return nil
+																	}}),
+																	scheduler.TimerStep(&scheduler.TimerStepArgs[string]{Delay: time.Second}),
+																},
+																StepResultFunc:     step_rf,
+																SequenceResultFunc: seq_rf,
+																LogProgressMode:    scheduler.LogProgressModeRep,
+															},
+														),
+														RepTotal: 2,
+													},
+												),
+												scheduler.TimerStep(&scheduler.TimerStepArgs[string]{Delay: time.Second}),
 											},
-											rf,
-											scheduler.LogProgressModeRep,
-										),
+											StepResultFunc:     step_rf,
+											SequenceResultFunc: seq_rf,
+											LogProgressMode:    scheduler.LogProgressModeRep,
+										},
 									),
-									scheduler.TimerStep[string](time.Second),
+									RepTotal: 2,
 								},
-								rf,
-								scheduler.LogProgressModeRep,
 							),
-						),
+						},
+						StepResultFunc:     step_rf,
+						SequenceResultFunc: seq_rf,
+						LogProgressMode:    scheduler.LogProgressModeRep,
 					},
-					rf,
-					scheduler.LogProgressModeRep,
 				),
 			},
 		)
@@ -1093,43 +1420,59 @@ func test5() {
 		s.ProcessAsync(
 			&scheduler.ScheduleSequenceEvent[string]{
 				Sequence: scheduler.NewSequence(
-					s,
-					true,
-					[]string{"J1"},
-					[]*scheduler.Step[string]{
-						scheduler.SequenceStep(
-							2,
-							scheduler.NewSequence(
-								s,
-								false,
-								[]string{"J2"},
-								[]*scheduler.Step[string]{
-									scheduler.SequenceStep(
-										2,
-										scheduler.NewSequence(
-											s,
-											true,
-											[]string{"J3"},
-											[]*scheduler.Step[string]{
-												scheduler.TimerStep[string](time.Second),
-												scheduler.ActionStep[string](func() error {
-													log.Printf("action J3")
-													return nil
-												}),
+					&scheduler.SequenceArgs[string]{
+						Scheduler:    s,
+						InheritGroup: false,
+						ReleaseGroup: true,
+						GroupSlice:   []string{"J1"},
+						StepSlice: []*scheduler.Step[string]{
+							scheduler.SequenceStep(
+								&scheduler.SequenceStepArgs[string]{
+									Sequence: scheduler.NewSequence(
+										&scheduler.SequenceArgs[string]{
+											Scheduler:    s,
+											InheritGroup: false,
+											ReleaseGroup: false,
+											GroupSlice:   []string{"J2"},
+											StepSlice: []*scheduler.Step[string]{
+												scheduler.SequenceStep(
+													&scheduler.SequenceStepArgs[string]{
+														Sequence: scheduler.NewSequence(
+															&scheduler.SequenceArgs[string]{
+																Scheduler:    s,
+																InheritGroup: false,
+																ReleaseGroup: true,
+																GroupSlice:   []string{"J3"},
+																StepSlice: []*scheduler.Step[string]{
+																	scheduler.TimerStep(&scheduler.TimerStepArgs[string]{Delay: time.Second}),
+																	scheduler.ActionStep(&scheduler.ActionStepArgs[string]{Action: func() error {
+																		log.Printf("action J3")
+																		return nil
+																	}}),
+																},
+																StepResultFunc:     step_rf,
+																SequenceResultFunc: seq_rf,
+																LogProgressMode:    scheduler.LogProgressModeRep,
+															},
+														),
+														RepTotal: 2,
+													},
+												),
+												scheduler.TimerStep(&scheduler.TimerStepArgs[string]{Delay: time.Second}),
 											},
-											rf,
-											scheduler.LogProgressModeRep,
-										),
+											StepResultFunc:     step_rf,
+											SequenceResultFunc: seq_rf,
+											LogProgressMode:    scheduler.LogProgressModeRep,
+										},
 									),
-									scheduler.TimerStep[string](time.Second),
+									RepTotal: 2,
 								},
-								rf,
-								scheduler.LogProgressModeRep,
 							),
-						),
+						},
+						StepResultFunc:     step_rf,
+						SequenceResultFunc: seq_rf,
+						LogProgressMode:    scheduler.LogProgressModeRep,
 					},
-					rf,
-					scheduler.LogProgressModeRep,
 				),
 			},
 		)
@@ -1150,78 +1493,123 @@ func test6() {
 		},
 	)
 
-	rf := func(q *scheduler.Sequence[string], stepIndex uint16, stepResult bool, sequenceResult bool) {
-		if !stepResult {
-			log.Printf("group=%+v, sequence interrupted at stepIndex=%d", q.GroupSlice, stepIndex)
-			return
-		}
+	step_rf := func(p *scheduler.Step[string], result bool) {
+		log.Printf(
+			"group=%s, step<%d/%d>, type=%s, rep<%d/%d>, step %s",
+			p.PrintGroup(),
+			p.StepNum(),
+			p.StepLen(),
+			p.Descriptor(),
+			p.RepNum(),
+			p.RepTotal(),
+			func() string {
+				if result {
+					return "completed"
+				} else {
+					return "interrupted"
+				}
+			}(),
+		)
+	}
 
-		if sequenceResult {
-			log.Printf("group=%+v, sequence completed", q.GroupSlice)
-			return
-		}
+	seq_rf := func(q *scheduler.Sequence[string], result bool) {
+		log.Printf(
+			"group=%s, step<%d/%d>, sequence %s",
+			q.PrintGroup(),
+			q.StepNum(),
+			q.StepLen(),
+			func() string {
+				if result {
+					return "completed"
+				} else {
+					return "interrupted"
+				}
+			}(),
+		)
 	}
 
 	go func() {
 		q1 := scheduler.NewSequence(
-			s,
-			true,
-			[]string{"A1"},
-			[]*scheduler.Step[string]{
-				scheduler.SequenceStep(
-					2,
-					scheduler.NewSequence(
-						s,
-						true,
-						[]string{"A2"},
-						[]*scheduler.Step[string]{
-							scheduler.SequenceStep(
-								2,
-								scheduler.NewSequence(
-									s,
-									true,
-									[]string{"A3-1"},
-									[]*scheduler.Step[string]{
-										scheduler.ActionStep[string](func() error {
-											log.Printf("action A3-1-1")
-											return nil
-										}),
-										scheduler.ActionStep[string](func() error {
-											log.Printf("action A3-1-2")
-											return nil
-										}),
-										scheduler.ActionStep[string](func() error {
-											log.Printf("action A3-1-3")
-											return nil
-										}),
+			&scheduler.SequenceArgs[string]{
+				Scheduler:    s,
+				InheritGroup: false,
+				ReleaseGroup: true,
+				GroupSlice:   []string{"A1"},
+				StepSlice: []*scheduler.Step[string]{
+					scheduler.SequenceStep(
+						&scheduler.SequenceStepArgs[string]{
+							Sequence: scheduler.NewSequence(
+								&scheduler.SequenceArgs[string]{
+									Scheduler:    s,
+									InheritGroup: false,
+									ReleaseGroup: true,
+									GroupSlice:   []string{"A2"},
+									StepSlice: []*scheduler.Step[string]{
+										scheduler.SequenceStep(
+											&scheduler.SequenceStepArgs[string]{
+												Sequence: scheduler.NewSequence(
+													&scheduler.SequenceArgs[string]{
+														Scheduler:    s,
+														InheritGroup: false,
+														ReleaseGroup: true,
+														GroupSlice:   []string{"A3-1"},
+														StepSlice: []*scheduler.Step[string]{
+															scheduler.ActionStep(&scheduler.ActionStepArgs[string]{Action: func() error {
+																log.Printf("action A3-1-1")
+																return nil
+															}}),
+															scheduler.ActionStep(&scheduler.ActionStepArgs[string]{Action: func() error {
+																log.Printf("action A3-1-2")
+																return nil
+															}}),
+															scheduler.ActionStep(&scheduler.ActionStepArgs[string]{Action: func() error {
+																log.Printf("action A3-1-3")
+																return nil
+															}}),
+														},
+														StepResultFunc:     step_rf,
+														SequenceResultFunc: seq_rf,
+														LogProgressMode:    scheduler.LogProgressModeRep,
+													},
+												),
+												RepTotal: 2,
+											},
+										),
+										scheduler.SequenceStep(
+											&scheduler.SequenceStepArgs[string]{
+												Sequence: scheduler.NewSequence(
+													&scheduler.SequenceArgs[string]{
+														Scheduler:    s,
+														InheritGroup: false,
+														ReleaseGroup: true,
+														GroupSlice:   []string{"A3-2"},
+														StepSlice: []*scheduler.Step[string]{
+															scheduler.TimerStep(&scheduler.TimerStepArgs[string]{Delay: time.Millisecond * 200}),
+															scheduler.TimerStep(&scheduler.TimerStepArgs[string]{Delay: time.Millisecond * 200}),
+															scheduler.TimerStep(&scheduler.TimerStepArgs[string]{Delay: time.Millisecond * 200}),
+														},
+														StepResultFunc:     step_rf,
+														SequenceResultFunc: seq_rf,
+														LogProgressMode:    scheduler.LogProgressModeRep,
+													},
+												),
+												RepTotal: 2,
+											},
+										),
 									},
-									rf,
-									scheduler.LogProgressModeRep,
-								),
+									StepResultFunc:     step_rf,
+									SequenceResultFunc: seq_rf,
+									LogProgressMode:    scheduler.LogProgressModeRep,
+								},
 							),
-							scheduler.SequenceStep(
-								2,
-								scheduler.NewSequence(
-									s,
-									true,
-									[]string{"A3-2"},
-									[]*scheduler.Step[string]{
-										scheduler.TimerStep[string](time.Millisecond * 200),
-										scheduler.TimerStep[string](time.Millisecond * 200),
-										scheduler.TimerStep[string](time.Millisecond * 200),
-									},
-									rf,
-									scheduler.LogProgressModeRep,
-								),
-							),
+							RepTotal: 2,
 						},
-						rf,
-						scheduler.LogProgressModeRep,
 					),
-				),
+				},
+				StepResultFunc:     step_rf,
+				SequenceResultFunc: seq_rf,
+				LogProgressMode:    scheduler.LogProgressModeRep,
 			},
-			rf,
-			scheduler.LogProgressModeRep,
 		)
 
 		s.ProcessAsync(
@@ -1257,6 +1645,744 @@ func test7() {
 	s.Shutdown()
 }
 
+func test8() {
+	s := scheduler.NewScheduler[string](
+		&scheduler.Options{
+			LogPrefix: "test8",
+			LogDebug:  true,
+		},
+	)
+	s.RunAsync()
+
+	step_rf := func(p *scheduler.Step[string], result bool) {
+		log.Printf(
+			"group=%s, step<%d/%d>, type=%s, rep<%d/%d>, step %s",
+			p.PrintGroup(),
+			p.StepNum(),
+			p.StepLen(),
+			p.Descriptor(),
+			p.RepNum(),
+			p.RepTotal(),
+			func() string {
+				if result {
+					return "completed"
+				} else {
+					return "interrupted"
+				}
+			}(),
+		)
+	}
+
+	seq_rf := func(q *scheduler.Sequence[string], result bool) {
+		log.Printf(
+			"group=%s, step<%d/%d>, sequence %s",
+			q.PrintGroup(),
+			q.StepNum(),
+			q.StepLen(),
+			func() string {
+				if result {
+					return "completed"
+				} else {
+					return "interrupted"
+				}
+			}(),
+		)
+	}
+
+	s.ProcessAsync(
+		&scheduler.ScheduleSequenceEvent[string]{
+			Sequence: scheduler.NewSequence(
+				&scheduler.SequenceArgs[string]{
+					Scheduler:    s,
+					InheritGroup: false,
+					ReleaseGroup: true,
+					GroupSlice:   []string{"A1"},
+					StepSlice: []*scheduler.Step[string]{
+						scheduler.SequenceStep(
+							&scheduler.SequenceStepArgs[string]{
+								Sequence: scheduler.NewSequence(
+									&scheduler.SequenceArgs[string]{
+										Scheduler:    s,
+										InheritGroup: false,
+										ReleaseGroup: false,
+										GroupSlice:   []string{"B1"},
+										StepSlice: []*scheduler.Step[string]{
+											scheduler.SequenceStep(
+												&scheduler.SequenceStepArgs[string]{
+													Sequence: scheduler.NewSequence(
+														&scheduler.SequenceArgs[string]{
+															Scheduler:    s,
+															InheritGroup: false,
+															ReleaseGroup: true,
+															GroupSlice:   []string{"C1"},
+															StepSlice: []*scheduler.Step[string]{
+																scheduler.TimerStep(&scheduler.TimerStepArgs[string]{Delay: time.Second}),
+															},
+															StepResultFunc:     step_rf,
+															SequenceResultFunc: seq_rf,
+															LogProgressMode:    scheduler.LogProgressModeRep,
+														},
+													),
+													RepTotal: 0,
+												},
+											),
+										},
+										StepResultFunc:     step_rf,
+										SequenceResultFunc: seq_rf,
+										LogProgressMode:    scheduler.LogProgressModeRep,
+									},
+								),
+								RepTotal: 1,
+							},
+						),
+					},
+					StepResultFunc:     step_rf,
+					SequenceResultFunc: seq_rf,
+					LogProgressMode:    scheduler.LogProgressModeRep,
+				},
+			),
+		},
+	)
+
+	<-time.After(time.Second * 2)
+
+	s.ProcessAsync(
+		&scheduler.ScheduleSequenceEvent[string]{
+			Sequence: scheduler.NewSequence(
+				&scheduler.SequenceArgs[string]{
+					Scheduler:    s,
+					InheritGroup: false,
+					ReleaseGroup: true,
+					GroupSlice:   []string{"A2"},
+					StepSlice: []*scheduler.Step[string]{
+						scheduler.SequenceStep(
+							&scheduler.SequenceStepArgs[string]{
+								Sequence: scheduler.NewSequence(
+									&scheduler.SequenceArgs[string]{
+										Scheduler:    s,
+										InheritGroup: false,
+										ReleaseGroup: false,
+										GroupSlice:   []string{"B2"},
+										StepSlice: []*scheduler.Step[string]{
+											scheduler.SequenceStep(
+												&scheduler.SequenceStepArgs[string]{
+													Sequence: scheduler.NewSequence(
+														&scheduler.SequenceArgs[string]{
+															Scheduler:    s,
+															InheritGroup: false,
+															ReleaseGroup: true,
+															GroupSlice:   []string{"C2"},
+															StepSlice: []*scheduler.Step[string]{
+																scheduler.TimerStep(&scheduler.TimerStepArgs[string]{Delay: time.Second}),
+															},
+															StepResultFunc:     step_rf,
+															SequenceResultFunc: seq_rf,
+															LogProgressMode:    scheduler.LogProgressModeRep,
+														},
+													),
+													RepTotal: 1,
+												},
+											),
+										},
+										StepResultFunc:     step_rf,
+										SequenceResultFunc: seq_rf,
+										LogProgressMode:    scheduler.LogProgressModeRep,
+									},
+								),
+								RepTotal: 0,
+							},
+						),
+					},
+					StepResultFunc:     step_rf,
+					SequenceResultFunc: seq_rf,
+					LogProgressMode:    scheduler.LogProgressModeRep,
+				},
+			),
+		},
+	)
+
+	<-time.After(time.Second * 2)
+
+	s.Shutdown()
+}
+
+func test9() {
+	s := scheduler.NewScheduler[string](
+		&scheduler.Options{
+			LogPrefix: "test9",
+			LogDebug:  true,
+		},
+	)
+	s.RunAsync()
+
+	step_rf := func(p *scheduler.Step[string], result bool) {
+		log.Printf(
+			"group=%s, step<%d/%d>, type=%s, rep<%d/%d>, step %s",
+			p.PrintGroup(),
+			p.StepNum(),
+			p.StepLen(),
+			p.Descriptor(),
+			p.RepNum(),
+			p.RepTotal(),
+			func() string {
+				if result {
+					return "completed"
+				} else {
+					return "interrupted"
+				}
+			}(),
+		)
+	}
+
+	seq_rf := func(q *scheduler.Sequence[string], result bool) {
+		log.Printf(
+			"group=%s, step<%d/%d>, sequence %s",
+			q.PrintGroup(),
+			q.StepNum(),
+			q.StepLen(),
+			func() string {
+				if result {
+					return "completed"
+				} else {
+					return "interrupted"
+				}
+			}(),
+		)
+	}
+
+	s.ProcessAsync(
+		&scheduler.ScheduleSequenceEvent[string]{
+			Sequence: scheduler.NewSequence(
+				&scheduler.SequenceArgs[string]{
+					Scheduler:    s,
+					InheritGroup: false,
+					ReleaseGroup: true,
+					GroupSlice:   []string{"B1"},
+					StepSlice: []*scheduler.Step[string]{
+						scheduler.SequenceStep(
+							&scheduler.SequenceStepArgs[string]{
+								Sequence: scheduler.NewSequence(
+									&scheduler.SequenceArgs[string]{
+										Scheduler:    s,
+										InheritGroup: false,
+										ReleaseGroup: true,
+										GroupSlice:   []string{"B2"},
+										StepSlice: []*scheduler.Step[string]{
+											scheduler.SequenceStep(
+												&scheduler.SequenceStepArgs[string]{
+													Sequence: scheduler.NewSequence(
+														&scheduler.SequenceArgs[string]{
+															Scheduler:    s,
+															InheritGroup: false,
+															ReleaseGroup: true,
+															GroupSlice:   []string{"B3-1"},
+															StepSlice: []*scheduler.Step[string]{
+																scheduler.ActionStep(&scheduler.ActionStepArgs[string]{Action: func() error {
+																	log.Printf("action B3-1-1")
+																	return nil
+																}}),
+																scheduler.ActionStep(&scheduler.ActionStepArgs[string]{Action: func() error {
+																	log.Printf("action B3-1-2")
+																	return nil
+																}}),
+																scheduler.ActionStep(&scheduler.ActionStepArgs[string]{Action: func() error {
+																	log.Printf("action B3-1-3")
+																	return nil
+																}}),
+															},
+															StepResultFunc:     step_rf,
+															SequenceResultFunc: seq_rf,
+															LogProgressMode:    scheduler.LogProgressModeStep,
+														},
+													),
+													RepTotal: 2,
+												},
+											),
+											scheduler.SequenceStep(
+												&scheduler.SequenceStepArgs[string]{
+													Sequence: scheduler.NewSequence(
+														&scheduler.SequenceArgs[string]{
+															Scheduler:    s,
+															InheritGroup: false,
+															ReleaseGroup: true,
+															GroupSlice:   []string{"B3-2"},
+															StepSlice: []*scheduler.Step[string]{
+																scheduler.TimerStep(&scheduler.TimerStepArgs[string]{Delay: time.Millisecond * 200}),
+																scheduler.TimerStep(&scheduler.TimerStepArgs[string]{Delay: time.Millisecond * 200}),
+																scheduler.TimerStep(&scheduler.TimerStepArgs[string]{Delay: time.Millisecond * 200}),
+															},
+															StepResultFunc:     step_rf,
+															SequenceResultFunc: seq_rf,
+															LogProgressMode:    scheduler.LogProgressModeStep,
+														},
+													),
+													RepTotal: 2,
+												},
+											),
+										},
+										StepResultFunc:     step_rf,
+										SequenceResultFunc: seq_rf,
+										LogProgressMode:    scheduler.LogProgressModeStep,
+									},
+								),
+								RepTotal: 2,
+							},
+						),
+					},
+					StepResultFunc:     step_rf,
+					SequenceResultFunc: seq_rf,
+					LogProgressMode:    scheduler.LogProgressModeStep,
+				},
+			),
+		},
+	)
+
+	<-time.After(time.Second * 4)
+
+	s.Shutdown()
+}
+
+func test10() {
+	s := scheduler.NewScheduler[string](
+		&scheduler.Options{
+			LogPrefix: "test10",
+			LogDebug:  false,
+		},
+	)
+	s.RunAsync()
+
+	seq_rf := func(q *scheduler.Sequence[string], result bool) {
+		log.Printf(
+			"group=%s, step<%d/%d>, sequence %s",
+			q.PrintGroup(),
+			q.StepNum(),
+			q.StepLen(),
+			func() string {
+				if result {
+					return "completed"
+				} else {
+					return "interrupted"
+				}
+			}(),
+		)
+	}
+
+	s.ProcessAsync(
+		&scheduler.ScheduleSequenceEvent[string]{
+			Sequence: scheduler.NewSequence(
+				&scheduler.SequenceArgs[string]{
+					Scheduler:    s,
+					InheritGroup: false,
+					ReleaseGroup: true,
+					GroupSlice:   []string{"C1"},
+					StepSlice: []*scheduler.Step[string]{
+						scheduler.SequenceStep(
+							&scheduler.SequenceStepArgs[string]{
+								Sequence: scheduler.NewSequence(
+									&scheduler.SequenceArgs[string]{
+										Scheduler:    s,
+										InheritGroup: false,
+										ReleaseGroup: true,
+										GroupSlice:   []string{"C2"},
+										StepSlice: []*scheduler.Step[string]{
+											scheduler.SequenceStep(
+												&scheduler.SequenceStepArgs[string]{
+													Sequence: scheduler.NewSequence(
+														&scheduler.SequenceArgs[string]{
+															Scheduler:    s,
+															InheritGroup: false,
+															ReleaseGroup: true,
+															GroupSlice:   []string{"C3-1"},
+															StepSlice: []*scheduler.Step[string]{
+																scheduler.ActionStep(&scheduler.ActionStepArgs[string]{Action: func() error {
+																	log.Printf("action C3-1-1")
+																	return nil
+																}}),
+																scheduler.ActionStep(&scheduler.ActionStepArgs[string]{Action: func() error {
+																	log.Printf("action C3-1-2")
+																	return nil
+																}}),
+																scheduler.ActionStep(&scheduler.ActionStepArgs[string]{Action: func() error {
+																	log.Printf("action C3-1-3")
+																	return nil
+																}}),
+															},
+															StepResultFunc:     nil,
+															SequenceResultFunc: seq_rf,
+															LogProgressMode:    scheduler.LogProgressModeRep,
+														},
+													),
+													RepTotal: 2,
+												},
+											),
+											scheduler.SequenceStep(
+												&scheduler.SequenceStepArgs[string]{
+													Sequence: scheduler.NewSequence(
+														&scheduler.SequenceArgs[string]{
+															Scheduler:    s,
+															InheritGroup: false,
+															ReleaseGroup: true,
+															GroupSlice:   []string{"C3-2"},
+															StepSlice: []*scheduler.Step[string]{
+																scheduler.TimerStep(&scheduler.TimerStepArgs[string]{Delay: time.Millisecond * 200}),
+																scheduler.TimerStep(&scheduler.TimerStepArgs[string]{Delay: time.Millisecond * 200}),
+																scheduler.TimerStep(&scheduler.TimerStepArgs[string]{Delay: time.Millisecond * 200}),
+															},
+															StepResultFunc:     nil,
+															SequenceResultFunc: seq_rf,
+															LogProgressMode:    scheduler.LogProgressModeRep,
+														},
+													),
+													RepTotal: 2,
+												},
+											),
+										},
+										StepResultFunc:     nil,
+										SequenceResultFunc: seq_rf,
+										LogProgressMode:    scheduler.LogProgressModeRep,
+									},
+								),
+								RepTotal: 2,
+							},
+						),
+					},
+					StepResultFunc:     nil,
+					SequenceResultFunc: seq_rf,
+					LogProgressMode:    scheduler.LogProgressModeRep,
+				},
+			),
+		},
+	)
+
+	<-time.After(time.Second * 4)
+
+	s.ProcessAsync(
+		&scheduler.ScheduleSequenceEvent[string]{
+			Sequence: scheduler.NewSequence(
+				&scheduler.SequenceArgs[string]{
+					Scheduler:    s,
+					InheritGroup: false,
+					ReleaseGroup: true,
+					GroupSlice:   []string{"A"},
+					StepSlice: []*scheduler.Step[string]{
+						scheduler.SequenceStep(
+							&scheduler.SequenceStepArgs[string]{
+								Sequence: scheduler.NewSequence(
+									&scheduler.SequenceArgs[string]{
+										Scheduler:    s,
+										InheritGroup: false,
+										ReleaseGroup: false,
+										GroupSlice:   []string{"B"},
+										StepSlice: []*scheduler.Step[string]{
+											scheduler.ActionStep(&scheduler.ActionStepArgs[string]{Action: func() error {
+												err := fmt.Errorf("child action step fail")
+												log.Printf("%s", err.Error())
+												return err
+											}}),
+											scheduler.ActionStep(&scheduler.ActionStepArgs[string]{Action: func() error {
+												log.Printf("cannot reach")
+												return nil
+											}}),
+											scheduler.TimerStep(&scheduler.TimerStepArgs[string]{Delay: time.Second}),
+										},
+										StepResultFunc:     nil,
+										SequenceResultFunc: seq_rf,
+										LogProgressMode:    scheduler.LogProgressModeRep,
+									},
+								),
+								RepTotal: 2,
+							},
+						),
+						scheduler.ActionStep(&scheduler.ActionStepArgs[string]{Action: func() error {
+							log.Printf("cannot reach")
+							return nil
+						}}),
+					},
+					StepResultFunc:     nil,
+					SequenceResultFunc: seq_rf,
+					LogProgressMode:    scheduler.LogProgressModeRep,
+				},
+			),
+		},
+	)
+
+	<-time.After(time.Second * 2)
+
+	s.Shutdown()
+}
+
+func test11() {
+	s := scheduler.NewScheduler[string](
+		&scheduler.Options{
+			LogPrefix: "test11",
+			LogDebug:  true,
+		},
+	)
+	s.RunAsync()
+
+	step_rf := func(p *scheduler.Step[string], result bool) {
+		log.Printf(
+			"group=%s, step<%d/%d>, type=%s, rep<%d/%d>, step %s",
+			p.PrintGroup(),
+			p.StepNum(),
+			p.StepLen(),
+			p.Descriptor(),
+			p.RepNum(),
+			p.RepTotal(),
+			func() string {
+				if result {
+					return "completed"
+				} else {
+					return "interrupted"
+				}
+			}(),
+		)
+	}
+
+	seq_rf := func(q *scheduler.Sequence[string], result bool) {
+		log.Printf(
+			"group=%s, step<%d/%d>, sequence %s",
+			q.PrintGroup(),
+			q.StepNum(),
+			q.StepLen(),
+			func() string {
+				if result {
+					return "completed"
+				} else {
+					return "interrupted"
+				}
+			}(),
+		)
+	}
+
+	s.ProcessAsync(
+		&scheduler.ScheduleSequenceEvent[string]{
+			Sequence: scheduler.NewSequence(
+				&scheduler.SequenceArgs[string]{
+					Scheduler:    s,
+					InheritGroup: true,
+					ReleaseGroup: true,
+					GroupSlice:   []string{"A1"},
+					StepSlice: []*scheduler.Step[string]{
+						scheduler.SequenceStep(
+							&scheduler.SequenceStepArgs[string]{
+								Sequence: scheduler.NewSequence(
+									&scheduler.SequenceArgs[string]{
+										Scheduler:    s,
+										InheritGroup: true,
+										ReleaseGroup: true,
+										GroupSlice:   []string{"B1"},
+										StepSlice: []*scheduler.Step[string]{
+											scheduler.SequenceStep(
+												&scheduler.SequenceStepArgs[string]{
+													Sequence: scheduler.NewSequence(
+														&scheduler.SequenceArgs[string]{
+															Scheduler:    s,
+															InheritGroup: true,
+															ReleaseGroup: true,
+															GroupSlice:   []string{"C1"},
+															StepSlice: []*scheduler.Step[string]{
+																scheduler.SequenceStep(
+																	&scheduler.SequenceStepArgs[string]{
+																		Sequence: scheduler.NewSequence(
+																			&scheduler.SequenceArgs[string]{
+																				Scheduler:    s,
+																				InheritGroup: true,
+																				ReleaseGroup: true,
+																				GroupSlice:   []string{"D1"},
+																				StepSlice: []*scheduler.Step[string]{
+																					scheduler.TimerStep(&scheduler.TimerStepArgs[string]{Delay: time.Second}),
+																				},
+																				StepResultFunc:     step_rf,
+																				SequenceResultFunc: seq_rf,
+																				LogProgressMode:    scheduler.LogProgressModeRep,
+																			},
+																		),
+																		RepTotal: 1,
+																	},
+																),
+															},
+															StepResultFunc:     step_rf,
+															SequenceResultFunc: seq_rf,
+															LogProgressMode:    scheduler.LogProgressModeRep,
+														},
+													),
+													RepTotal: 1,
+												},
+											),
+										},
+										StepResultFunc:     step_rf,
+										SequenceResultFunc: seq_rf,
+										LogProgressMode:    scheduler.LogProgressModeRep,
+									},
+								),
+								RepTotal: 2,
+							},
+						),
+					},
+					StepResultFunc:     step_rf,
+					SequenceResultFunc: seq_rf,
+					LogProgressMode:    scheduler.LogProgressModeRep,
+				},
+			),
+		},
+	)
+
+	<-time.After(time.Second * 4)
+
+	s.ProcessAsync(
+		&scheduler.ScheduleSequenceEvent[string]{
+			Sequence: scheduler.NewSequence(
+				&scheduler.SequenceArgs[string]{
+					Scheduler:    s,
+					InheritGroup: true,
+					ReleaseGroup: true,
+					GroupSlice:   []string{"A2", "B2"},
+					StepSlice: []*scheduler.Step[string]{
+						scheduler.SequenceStep(
+							&scheduler.SequenceStepArgs[string]{
+								Sequence: scheduler.NewSequence(
+									&scheduler.SequenceArgs[string]{
+										Scheduler:    s,
+										InheritGroup: true,
+										ReleaseGroup: true,
+										GroupSlice:   []string{"B2", "C2"},
+										StepSlice: []*scheduler.Step[string]{
+											scheduler.SequenceStep(
+												&scheduler.SequenceStepArgs[string]{
+													Sequence: scheduler.NewSequence(
+														&scheduler.SequenceArgs[string]{
+															Scheduler:    s,
+															InheritGroup: true,
+															ReleaseGroup: true,
+															GroupSlice:   []string{},
+															StepSlice: []*scheduler.Step[string]{
+																scheduler.SequenceStep(
+																	&scheduler.SequenceStepArgs[string]{
+																		Sequence: scheduler.NewSequence(
+																			&scheduler.SequenceArgs[string]{
+																				Scheduler:    s,
+																				InheritGroup: true,
+																				ReleaseGroup: true,
+																				GroupSlice:   nil,
+																				StepSlice: []*scheduler.Step[string]{
+																					scheduler.TimerStep(&scheduler.TimerStepArgs[string]{Delay: time.Second}),
+																				},
+																				StepResultFunc:     step_rf,
+																				SequenceResultFunc: seq_rf,
+																				LogProgressMode:    scheduler.LogProgressModeRep,
+																			},
+																		),
+																		RepTotal: 1,
+																	},
+																),
+															},
+															StepResultFunc:     step_rf,
+															SequenceResultFunc: seq_rf,
+															LogProgressMode:    scheduler.LogProgressModeRep,
+														},
+													),
+													RepTotal: 1,
+												},
+											),
+										},
+										StepResultFunc:     step_rf,
+										SequenceResultFunc: seq_rf,
+										LogProgressMode:    scheduler.LogProgressModeRep,
+									},
+								),
+								RepTotal: 2,
+							},
+						),
+					},
+					StepResultFunc:     step_rf,
+					SequenceResultFunc: seq_rf,
+					LogProgressMode:    scheduler.LogProgressModeRep,
+				},
+			),
+		},
+	)
+
+	<-time.After(time.Second * 4)
+
+	s.ProcessAsync(
+		&scheduler.ScheduleSequenceEvent[string]{
+			Sequence: scheduler.NewSequence(
+				&scheduler.SequenceArgs[string]{
+					Scheduler:    s,
+					InheritGroup: true,
+					ReleaseGroup: true,
+					GroupSlice:   nil,
+					StepSlice: []*scheduler.Step[string]{
+						scheduler.SequenceStep(
+							&scheduler.SequenceStepArgs[string]{
+								Sequence: scheduler.NewSequence(
+									&scheduler.SequenceArgs[string]{
+										Scheduler:    s,
+										InheritGroup: true,
+										ReleaseGroup: true,
+										GroupSlice:   []string{"A3", "B3"},
+										StepSlice: []*scheduler.Step[string]{
+											scheduler.SequenceStep(
+												&scheduler.SequenceStepArgs[string]{
+													Sequence: scheduler.NewSequence(
+														&scheduler.SequenceArgs[string]{
+															Scheduler:    s,
+															InheritGroup: false,
+															ReleaseGroup: true,
+															GroupSlice:   []string{"C3"},
+															StepSlice: []*scheduler.Step[string]{
+																scheduler.SequenceStep(
+																	&scheduler.SequenceStepArgs[string]{
+																		Sequence: scheduler.NewSequence(
+																			&scheduler.SequenceArgs[string]{
+																				Scheduler:    s,
+																				InheritGroup: true,
+																				ReleaseGroup: true,
+																				GroupSlice:   []string{"D3"},
+																				StepSlice: []*scheduler.Step[string]{
+																					scheduler.TimerStep(&scheduler.TimerStepArgs[string]{Delay: time.Second}),
+																				},
+																				StepResultFunc:     step_rf,
+																				SequenceResultFunc: seq_rf,
+																				LogProgressMode:    scheduler.LogProgressModeRep,
+																			},
+																		),
+																		RepTotal: 1,
+																	},
+																),
+															},
+															StepResultFunc:     step_rf,
+															SequenceResultFunc: seq_rf,
+															LogProgressMode:    scheduler.LogProgressModeRep,
+														},
+													),
+													RepTotal: 1,
+												},
+											),
+										},
+										StepResultFunc:     step_rf,
+										SequenceResultFunc: seq_rf,
+										LogProgressMode:    scheduler.LogProgressModeRep,
+									},
+								),
+								RepTotal: 2,
+							},
+						),
+					},
+					StepResultFunc:     step_rf,
+					SequenceResultFunc: seq_rf,
+					LogProgressMode:    scheduler.LogProgressModeRep,
+				},
+			),
+		},
+	)
+
+	<-time.After(time.Second * 4)
+
+	s.Shutdown()
+}
+
 func main() {
 	// enable microsecond and file line logging
 	log.SetFlags(log.LstdFlags | log.Lmicroseconds | log.Lshortfile)
@@ -1268,4 +2394,8 @@ func main() {
 	test5()
 	test6()
 	test7()
+	test8()
+	test9()
+	test10()
+	test11()
 }
