@@ -2383,6 +2383,85 @@ func test11() {
 	s.Shutdown()
 }
 
+func test12() {
+	s := scheduler.NewScheduler[struct{}](
+		&scheduler.Options{
+			LogPrefix: "test12",
+			LogDebug:  true,
+		},
+	)
+	s.RunAsync()
+
+	ch := make(chan time.Time)
+	s.ProcessAsync(
+		&scheduler.ScheduleAsyncEvent[struct{}]{
+			AsyncVariant: scheduler.NewAsyncVariant(
+				&scheduler.AsyncVariantArgs[struct{}]{
+					ReleaseGroup: true,
+					GroupTracker: nil,
+					Chan:         ch,
+					SelectFunc: func(s *scheduler.Scheduler[struct{}], v *scheduler.AsyncVariant[struct{}], recv interface{}) {
+						log.Printf("0: selected, recv=%+v", recv)
+					},
+					ReleaseFunc: func(s *scheduler.Scheduler[struct{}], v *scheduler.AsyncVariant[struct{}]) {
+						log.Printf("0: released, selectCount=%d", v.SelectCount())
+					},
+				},
+			),
+		},
+	)
+
+	s.ProcessAsync(
+		&scheduler.ScheduleAsyncEvent[struct{}]{
+			AsyncVariant: scheduler.TimerAsync(
+				&scheduler.TimerAsyncArgs[struct{}]{
+					ReleaseGroup: false,
+					GroupSlice:   []struct{}{{}},
+					Delay:        time.Second * 3,
+					SelectFunc: func() {
+						log.Printf("1: selected")
+					},
+					ReleaseFunc: func(selectCount uint32) {
+						log.Printf("1: released, selectCount=%d", selectCount)
+					},
+				},
+			),
+		},
+	)
+
+	s.ProcessAsync(
+		&scheduler.ScheduleAsyncEvent[struct{}]{
+			AsyncVariant: scheduler.TimerAsync(
+				&scheduler.TimerAsyncArgs[struct{}]{
+					ReleaseGroup: false,
+					GroupSlice:   nil,
+					Delay:        time.Second * 3,
+					SelectFunc: func() {
+						log.Printf("2: selected")
+					},
+					ReleaseFunc: func(selectCount uint32) {
+						log.Printf("2: released, selectCount=%d", selectCount)
+					},
+				},
+			),
+		},
+	)
+
+	<-time.After(time.Second)
+
+	s.ProcessAsync(
+		&scheduler.ReleaseGroupEvent[struct{}]{
+			Group: struct{}{},
+		},
+	)
+
+	ch <- time.Now().Local()
+
+	<-time.After(time.Second * 2)
+
+	s.Shutdown()
+}
+
 func main() {
 	// enable microsecond and file line logging
 	log.SetFlags(log.LstdFlags | log.Lmicroseconds | log.Lshortfile)
@@ -2398,4 +2477,5 @@ func main() {
 	test9()
 	test10()
 	test11()
+	test12()
 }
